@@ -23,5 +23,65 @@ export const strings = {
   'upcoming.empty': 'Nothing coming up yet.',
 
   'settings.title': 'Settings',
-  'settings.empty': 'Settings will appear here.',
+  'settings.account': 'Account',
+  'settings.signedInAs': 'Signed in as',
+  'settings.signOut': 'Sign out',
+
+  'auth.signInTitle': 'Sign in',
+  'auth.signUpTitle': 'Create your account',
+  'auth.username': 'Username',
+  'auth.password': 'Password',
+  'auth.passwordRepeat': 'Repeat password',
+  'auth.signInButton': 'Sign in',
+  'auth.signUpButton': 'Continue',
+  'auth.noAccount': 'New here?',
+  'auth.createLink': 'Create an account',
+  'auth.haveAccount': 'Already have an account?',
+  'auth.signInLink': 'Sign in',
+  'auth.usernameHint': 'Letters, numbers, dot, dash or underscore. No email address needed.',
+  'auth.passwordHint': 'At least 10 characters. A few random words work well.',
+  'auth.warning': 'Your data is encrypted with your password. If you forget it, only your recovery key can get you back in. Nobody else can reset it.',
+  'auth.working': 'Working…',
+  'auth.lockedTitle': 'Welcome back, {name}',
+  'auth.lockedText': 'Enter your password to unlock your data on this device.',
+  'auth.unlockButton': 'Unlock',
+  'auth.otherAccount': 'Use a different account',
+  'auth.recoveryTitle': 'Save your recovery key',
+  'auth.recoveryAccount': 'Account: {name}',
+  'auth.recoveryText': 'This key is the only way back into your data if you forget your password. It is shown once. Keep it somewhere safe, such as a password manager or a printout.',
+  'auth.recoveryDownload': 'Download',
+  'auth.recoveryCopy': 'Copy',
+  'auth.recoveryCopied': 'Copied',
+  'auth.recoveryPrint': 'Print',
+  'auth.recoveryEmail': 'Email it to myself',
+  'auth.recoveryEmailWarning': 'Emailing the key is optional. Anyone who can read that email and also gets hold of your account data could unlock it.',
+  'auth.recoveryEmailSubject': 'Folkhold recovery key',
+  'auth.recoveryFile': 'Folkhold recovery key\nAccount: {name}\nKey: {key}\n\nKeep this private. Anyone with this key and your account data can unlock your data. Without it and your password, your data cannot be recovered.',
+  'auth.recoveryConfirm': 'I have saved my recovery key somewhere safe.',
+  'auth.recoveryFinish': 'Finish setup',
+
+  'auth.errUsername': 'Use 3 to 32 characters: letters, numbers, dot, dash or underscore.',
+  'auth.errPasswordShort': 'Use at least 10 characters for your password.',
+  'auth.errMismatch': 'The two passwords are different.',
+  'auth.errTaken': 'That username is already taken.',
+  'auth.errWrong': 'Wrong username or password.',
+  'auth.errNetwork': 'Could not reach the server. Check your connection and try again.',
+  'auth.errSignupOff': 'Creating accounts is switched off right now.',
+  'auth.errRate': 'Too many attempts. Please wait a few minutes and try again.',
+  'auth.errRejected': 'The server rejected this username. (Technical: email address invalid.)',
+  'auth.errConfirmOn': 'The server expects an email confirmation, which this app does not use. (Technical: switch off "Confirm email" in Supabase.)',
+  'auth.errSetup': 'Could not save your keys. Please try again.',
 };
+
+// Fills {placeholders} in a string, for example t('auth.recoveryAccount', { name: 'tom' }).
+export function t(key, values = {}) {
+  let text = strings[key];
+  if (text === undefined) {
+    console.warn('Missing string:', key);
+    return key;
+  }
+  for (const [name, value] of Object.entries(values)) {
+    text = text.replaceAll(`{${name}}`, value);
+  }
+  return text;
+}

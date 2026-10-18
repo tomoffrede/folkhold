@@ -3,3 +3,6 @@
 
 export const SUPABASE_URL = 'https://prfdfmxflsdcihbigxtg.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_9qNEVzisapPnWzrrmIRpZQ_iwWgBkMk';
+
+// The app logs in with an email-shaped name made from the username. No email is ever sent to it.
+export const USERNAME_EMAIL_DOMAIN = 'folkhold.invalid';

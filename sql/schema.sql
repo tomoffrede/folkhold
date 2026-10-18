@@ -16,7 +16,6 @@ create index items_user_type_idx on public.items (user_id, type);
 -- 2. User keys: the scrambled master key, locked once by the password and once by the recovery key.
 create table public.user_keys (
   user_id               uuid primary key default auth.uid() references auth.users (id) on delete cascade,
-  salt                  text not null,
   kdf_iterations        integer not null,
   wrapped_key_password  text not null,
   wrapped_key_recovery  text not null,
@@ -58,9 +57,6 @@ create policy "user_keys: own row only" on public.user_keys
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
--- 5. Privileges: signed-in users may use the tables (the access rules above limit them to their own rows).
--- Visitors who are not signed in get no access at all.
-grant select, insert, update, delete on public.items to authenticated;
-grant select, insert, update, delete on public.user_keys to authenticated;
+-- 5. Visitors who are not signed in get no access at all.
 revoke all on public.items from anon;
 revoke all on public.user_keys from anon;

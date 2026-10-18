@@ -12,7 +12,7 @@ const enc = new TextEncoder();
 const dec = new TextDecoder();
 
 const FORMAT = 'v1';
-const PBKDF2_ITERATIONS = 600000;
+export const PBKDF2_ITERATIONS = 600000;
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // base 32 without easily confused letters
 const RECOVERY_KEY_LENGTH = 52; // characters (256 bits)
 

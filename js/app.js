@@ -1,6 +1,7 @@
 // Startup and navigation. Screens are switched by the part of the address after "#".
 
 import { strings } from './strings.js';
+import { initAuth } from './views/auth.js';
 
 const SCREENS = ['home', 'contacts', 'upcoming', 'settings'];
 
@@ -44,3 +45,4 @@ function showScreen() {
 window.addEventListener('hashchange', showScreen);
 fillStrings();
 showScreen();
+initAuth();
