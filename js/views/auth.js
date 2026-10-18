@@ -26,6 +26,7 @@ function showApp() {
   $('auth-root').hidden = true;
   $('app').hidden = false;
   window.scrollTo(0, 0);
+  document.dispatchEvent(new Event('folkhold:ready'));
 }
 
 function showLocked() {

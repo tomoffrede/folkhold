@@ -18,6 +18,22 @@ export const strings = {
 
   'contacts.title': 'Contacts',
   'contacts.empty': 'No contacts yet.',
+  'contacts.add': 'Add contact',
+  'contacts.loading': 'Loading\u2026',
+
+  'addContact.title': 'Add contact',
+  'addContact.firstName': 'First name',
+  'addContact.lastName': 'Last name',
+  'addContact.nickname': 'Nickname',
+  'addContact.hint': 'A name or a nickname is enough. You can add more later.',
+  'addContact.save': 'Save',
+  'addContact.cancel': 'Cancel',
+  'addContact.errNeedName': 'Enter a first name, a last name or a nickname.',
+
+  'data.errLoad': 'Could not load your data. Check your connection and try again.',
+  'data.errSave': 'Could not save. Check your connection and try again.',
+  'data.retry': 'Try again',
+  'data.errUnreadable': '{count} item(s) could not be decrypted and are not shown.',
 
   'upcoming.title': 'Upcoming',
   'upcoming.empty': 'Nothing coming up yet.',

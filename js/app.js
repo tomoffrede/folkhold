@@ -2,8 +2,9 @@
 
 import { strings } from './strings.js';
 import { initAuth } from './views/auth.js';
+import { initContacts } from './views/contacts.js';
 
-const SCREENS = ['home', 'contacts', 'upcoming', 'settings'];
+const SCREENS = ['home', 'contacts', 'add-contact', 'upcoming', 'settings'];
 
 // Put the text from strings.js into every element that has a data-text attribute.
 function fillStrings() {
@@ -45,4 +46,5 @@ function showScreen() {
 window.addEventListener('hashchange', showScreen);
 fillStrings();
 showScreen();
+initContacts();
 initAuth();
