@@ -3,7 +3,8 @@
 import { strings } from './strings.js';
 import { initAuth } from './views/auth.js';
 import { initContacts } from './views/contacts.js';
-import { initContact } from './views/contact.js';
+import { initContact } from './views/contact-page.js';
+import { initSettings } from './views/settings.js';
 
 const SCREENS = ['home', 'contacts', 'add-contact', 'contact', 'upcoming', 'settings'];
 
@@ -50,4 +51,5 @@ fillStrings();
 showScreen();
 initContacts();
 initContact();
+initSettings();
 initAuth();

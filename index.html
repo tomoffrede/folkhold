@@ -91,6 +91,15 @@
 <p class="account-line"><span data-text="settings.signedInAs"></span> <strong id="settings-username"></strong></p>
 <button type="button" class="btn btn-secondary btn-small" data-action="sign-out" data-text="settings.signOut"></button>
 </div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.sortTitle"></h3>
+<div class="choice">
+<label class="choice-option"><input type="radio" name="contact-sort" value="first" checked disabled><span data-text="settings.sortFirst"></span></label>
+<label class="choice-option"><input type="radio" name="contact-sort" value="last" disabled><span data-text="settings.sortLast"></span></label>
+</div>
+<p class="form-error" id="settings-message" role="alert" hidden></p>
+</div>
 </section>
 
 </main>
