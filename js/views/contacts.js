@@ -16,7 +16,9 @@ export function displayName(contact) {
 
 function personRow(contact) {
   const name = displayName(contact);
-  const row = document.createElement('li');
+  const item = document.createElement('li');
+  const row = document.createElement('a');
+  row.href = `#/contact/${contact.id}`;
   row.className = 'person';
 
   const avatar = document.createElement('span');
@@ -39,7 +41,8 @@ function personRow(contact) {
   }
 
   row.append(avatar, text);
-  return row;
+  item.append(row);
+  return item;
 }
 
 function renderList() {
@@ -138,4 +141,9 @@ export function initContacts() {
   });
   bindForm();
   document.addEventListener('folkhold:ready', load);
+  document.addEventListener('folkhold:saved', renderList);
+  // Coming back from a contact page: show the latest names.
+  window.addEventListener('hashchange', () => {
+    if (location.hash === '#/contacts') renderList();
+  });
 }
