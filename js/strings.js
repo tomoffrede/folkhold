@@ -62,6 +62,14 @@ export const strings = {
   'contact.deleteSure': 'Delete this contact for good?',
   'contact.deleteYes': 'Delete',
   'contact.deleteNo': 'Keep',
+  'contact.edit': 'Edit contact',
+  'contact.done': 'Done',
+  'contact.nothingYet': 'No details yet. Tap “Edit contact” to add some.',
+  'contact.showLabels': 'Show label options',
+
+  'settings.sortTitle': 'Sort contacts by',
+  'settings.sortFirst': 'First name',
+  'settings.sortLast': 'Last name',
 
   'data.errDelete': 'Could not delete. Check your connection and try again.',
   'data.errLoad': 'Could not load your data. Check your connection and try again.',
