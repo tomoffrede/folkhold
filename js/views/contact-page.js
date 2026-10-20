@@ -34,6 +34,8 @@ let newId = null; // set once a new contact has been saved, so pressing Save aga
 let dirty = false; // there are typed changes that are not saved yet
 let birthdayProblem = false; // the last save left out an impossible birthday
 let timer = null;
+let previousHash = ''; // where the person came from
+let cameFrom = '#/contacts'; // where "Discard" on a new contact goes back to
 let queue = Promise.resolve(); // saves run one after the other
 
 function make(tag, className, text) {
@@ -328,6 +330,7 @@ function renderEditor(page, contact) {
   names.append(nameRow, nameField('nickname', 'addContact.nickname', contact));
 
   const chips = make('div', 'chips');
+  let noteRow = null;
   GROUPS.forEach((group) => {
     const chip = make('button', 'chip', strings[group.chip]);
     chip.type = 'button';
@@ -343,7 +346,9 @@ function renderEditor(page, contact) {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
     noteChip.dataset.add = 'note';
-    chips.append(noteChip);
+    noteChip.classList.add('chip-note'); // looks different from the detail chips above it
+    noteRow = make('div', 'chips chips-note');
+    noteRow.append(noteChip);
   }
 
   const danger = make('div', 'danger');
@@ -370,6 +375,7 @@ function renderEditor(page, contact) {
     page.append(pending);
   }
   page.append(chips);
+  if (noteRow) page.append(noteRow);
   if (isNew) {
     const create = make('button', 'btn btn-primary btn-form done-bottom', strings['addContact.save']);
     create.type = 'button';
@@ -388,6 +394,7 @@ function render() {
   contactId = route.id;
   editing = route.edit;
   isNew = route.isNew;
+  if (isNew) cameFrom = previousHash === '#/contacts' ? '#/contacts' : '#/home';
   newId = null;
   snapshot = null;
   dirty = false;
@@ -599,7 +606,7 @@ function discard() {
 }
 
 function leaveEditor() {
-  goTo(isNew ? '#/contacts' : `#/contact/${contactId}`);
+  goTo(isNew ? cameFrom : `#/contact/${contactId}`);
 }
 
 // "Yes, discard": put the contact back as it was when the editor opened.
@@ -746,7 +753,8 @@ function bindPage() {
 export function initContact() {
   bindPage();
 
-  window.addEventListener('hashchange', () => {
+  window.addEventListener('hashchange', (event) => {
+    previousHash = new URL(event.oldURL).hash;
     // Leaving the editor (or switching contact) with unsaved typing: save first, and show the page once it is saved.
     const leavingWithChanges = editing && dirty && contactId;
     if (leavingWithChanges) save();
