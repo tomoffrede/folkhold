@@ -6,6 +6,8 @@ import { strings } from '../strings.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
 import { renderNotesSection } from './contact-notes.js';
+import { createNoteFields } from './note-fields.js';
+import * as rich from '../richtext.js';
 import { displayName } from './contacts.js';
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +28,9 @@ const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).to
 
 let contactId = null;
 let editing = false;
+let isNew = false; // the "add contact" form: nothing is saved until the Save button
+let snapshot = null; // the contact as it was when the editor opened, for "Discard changes"
+let newId = null; // set once a new contact has been saved, so pressing Save again cannot make a second one
 let dirty = false; // there are typed changes that are not saved yet
 let birthdayProblem = false; // the last save left out an impossible birthday
 let timer = null;
@@ -39,8 +44,9 @@ function make(tag, className, text) {
 }
 
 function parseRoute() {
+  if (location.hash === '#/add-contact') return { id: null, edit: true, isNew: true };
   const match = location.hash.match(/^#\/contact\/([0-9a-f-]+)(\/edit)?$/i);
-  return match ? { id: match[1], edit: Boolean(match[2]) } : null;
+  return match ? { id: match[1], edit: Boolean(match[2]), isNew: false } : null;
 }
 
 function goTo(hash) {
@@ -288,8 +294,15 @@ function doneButton(className) {
   return done;
 }
 
+function discardButton() {
+  const button = make('button', 'btn btn-secondary btn-small', strings['contact.discard']);
+  button.type = 'button';
+  button.dataset.act = 'discard';
+  return button;
+}
+
 function renderEditor(page, contact) {
-  const title = make('h2', 'section-title', displayName(contact));
+  const title = make('h2', 'section-title', displayName(contact) || strings['addContact.title']);
   title.id = 'contact-title';
   const status = make('p', 'save-status');
   status.id = 'contact-status';
@@ -297,7 +310,17 @@ function renderEditor(page, contact) {
   const titles = make('div', 'contact-titles');
   titles.append(title, status);
   const head = make('div', 'contact-head');
-  head.append(titles, doneButton('btn btn-primary btn-small'));
+  head.append(titles, discardButton());
+
+  const discardRow = make('div', 'confirm-row discard-row');
+  discardRow.hidden = true;
+  const discardYes = make('button', 'btn btn-danger btn-small', strings['contact.discardYes']);
+  discardYes.type = 'button';
+  discardYes.dataset.act = 'discard-yes';
+  const discardNo = make('button', 'btn btn-secondary btn-small', strings['contact.discardNo']);
+  discardNo.type = 'button';
+  discardNo.dataset.act = 'discard-no';
+  discardRow.append(make('span', 'confirm-text', strings[isNew ? 'contact.discardSureNew' : 'contact.discardSure']), discardYes, discardNo);
 
   const names = make('div', 'form');
   const nameRow = make('div', 'field-row');
@@ -316,6 +339,12 @@ function renderEditor(page, contact) {
   birthdayChip.dataset.add = 'birthday';
   birthdayChip.hidden = Boolean(contact.birthday);
   chips.append(birthdayChip);
+  if (isNew) {
+    const noteChip = make('button', 'chip', strings['contact.chipNote']);
+    noteChip.type = 'button';
+    noteChip.dataset.add = 'note';
+    chips.append(noteChip);
+  }
 
   const danger = make('div', 'danger');
   const ask = make('button', 'link link-danger', strings['contact.delete']);
@@ -332,9 +361,23 @@ function renderEditor(page, contact) {
   sure.append(make('span', 'confirm-text', strings['contact.deleteSure']), yes, no);
   danger.append(ask, sure);
 
-  page.append(head, names);
+  page.append(head, discardRow, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
-  page.append(birthdayBlock(contact.birthday), chips, doneButton('btn btn-primary btn-form done-bottom'), danger);
+  page.append(birthdayBlock(contact.birthday));
+  if (isNew) {
+    const pending = make('div', 'pending-notes');
+    pending.id = 'pending-notes';
+    page.append(pending);
+  }
+  page.append(chips);
+  if (isNew) {
+    const create = make('button', 'btn btn-primary btn-form done-bottom', strings['addContact.save']);
+    create.type = 'button';
+    create.dataset.act = 'save-new';
+    page.append(create);
+  } else {
+    page.append(doneButton('btn btn-primary btn-form done-bottom'), danger);
+  }
 }
 
 // ---------- showing the right page ----------
@@ -344,6 +387,9 @@ function render() {
   if (!route) return;
   contactId = route.id;
   editing = route.edit;
+  isNew = route.isNew;
+  newId = null;
+  snapshot = null;
   dirty = false;
   birthdayProblem = false;
   clearTimeout(timer);
@@ -356,10 +402,14 @@ function render() {
     page.append(make('p', 'empty', strings['contacts.loading']));
     return;
   }
-  const contact = store.get('contact', route.id);
+  const contact = isNew ? {} : store.get('contact', route.id);
   if (!contact) {
     page.append(make('p', 'empty', strings['contact.notFound']));
     return;
+  }
+  if (editing && !isNew) {
+    const { id, ...fields } = contact;
+    snapshot = JSON.parse(JSON.stringify(fields));
   }
   if (editing) renderEditor(page, contact);
   else renderView(page, contact);
@@ -402,7 +452,7 @@ function readBirthday(block) {
 
 function readFields() {
   const page = $('contact-page');
-  const fields = { ...store.get('contact', contactId) };
+  const fields = { ...(contactId ? store.get('contact', contactId) : {}) };
   delete fields.id;
   MANAGED.forEach((key) => delete fields[key]);
 
@@ -443,7 +493,7 @@ function setStatus(text, isError = false) {
 function save() {
   clearTimeout(timer);
   const id = contactId;
-  if (!editing || !id || !store.get('contact', id)) return Promise.resolve(false);
+  if (!editing || isNew || !id || !store.get('contact', id)) return Promise.resolve(false);
   const { fields, problem } = readFields(); // read now, so a page change right after cannot mix contacts up
   birthdayProblem = problem;
   if (!NAME_KEYS.some((key) => fields[key])) {
@@ -477,7 +527,7 @@ function updateTitle() {
   const page = $('contact-page');
   const value = (key) => page.querySelector(`[data-field="${key}"]`).value.trim();
   const name = displayName({ firstName: value('firstName'), lastName: value('lastName'), nickname: value('nickname') });
-  $('contact-title').textContent = name || '…';
+  $('contact-title').textContent = name || (isNew ? strings['addContact.title'] : '…');
 }
 
 function addEntry(key) {
@@ -489,12 +539,108 @@ function addEntry(key) {
     block.querySelector('[data-part="day"]').focus();
     return;
   }
+  if (key === 'note') {
+    addPendingNote();
+    return;
+  }
   const group = GROUPS.find((g) => g.key === key);
   const block = page.querySelector(`[data-group="${key}"]`);
   const row = entryRow(group);
   block.hidden = false;
   block.querySelector('.entries').append(row);
   row.querySelector('.entry-value').focus();
+}
+
+// New-contact form: a note typed here is kept on the page and saved together with the contact.
+function addPendingNote() {
+  const block = make('div', 'group pending-note');
+  const head = make('div', 'notes-head');
+  head.append(make('h3', 'group-title', strings['contact.newNote']));
+  const remove = make('button', 'entry-remove', '×');
+  remove.type = 'button';
+  remove.dataset.act = 'remove-note';
+  remove.setAttribute('aria-label', strings['contact.removeNote']);
+  head.append(remove);
+  const fields = createNoteFields();
+  block.append(head, fields.element);
+  block.noteFields = fields;
+  $('pending-notes').append(block);
+  fields.focus();
+}
+
+function pendingNotes() {
+  return [...document.querySelectorAll('#pending-notes .pending-note')].map((block) => block.noteFields.get());
+}
+
+// Is there anything on the page that differs from how the contact was when the editor opened (or, when new, anything at all)?
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function hasChanges() {
+  const { fields } = readFields();
+  if (isNew) return Object.keys(fields).length > 0 || pendingNotes().some((n) => n.title || !rich.isEmpty(n.body));
+  return canonical(fields) !== canonical(snapshot);
+}
+
+function showDiscardQuestion(show) {
+  const page = $('contact-page');
+  page.querySelector('.discard-row').hidden = !show;
+  page.querySelector('[data-act="discard"]').hidden = show;
+}
+
+function discard() {
+  if (hasChanges()) showDiscardQuestion(true);
+  else leaveEditor();
+}
+
+function leaveEditor() {
+  goTo(isNew ? '#/contacts' : `#/contact/${contactId}`);
+}
+
+// "Yes, discard": put the contact back as it was when the editor opened.
+async function discardYes(button) {
+  button.disabled = true;
+  clearTimeout(timer);
+  dirty = false;
+  try {
+    await queue;
+    if (!isNew && canonical(store.get('contact', contactId) && (({ id, ...f }) => f)(store.get('contact', contactId))) !== canonical(snapshot)) {
+      await store.update('contact', contactId, snapshot);
+    }
+    leaveEditor();
+  } catch (error) {
+    setStatus(error.message, true);
+    button.disabled = false;
+  }
+}
+
+// New contact: save it, then its notes, then show its page.
+async function saveNew(button) {
+  const { fields, problem } = readFields();
+  if (!NAME_KEYS.some((key) => fields[key])) {
+    setStatus(strings['contact.errNeedName'], true);
+    return;
+  }
+  if (problem) {
+    setStatus(strings['contact.errBirthday'], true);
+    return;
+  }
+  button.disabled = true;
+  setStatus(strings['contact.saving']);
+  try {
+    if (!newId) newId = await store.add('contact', fields);
+    const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
+    for (const n of list) await notes.create({ ...n, contactIds: [newId] });
+    goTo(`#/contact/${newId}`);
+  } catch (error) {
+    setStatus(error.message, true);
+    button.disabled = false;
+  }
 }
 
 function removeEntry(button) {
@@ -549,7 +695,7 @@ async function deleteContact(button) {
 function showDeleteQuestion(show) {
   const page = $('contact-page');
   page.querySelector('[data-act="delete"]').hidden = show;
-  page.querySelector('.confirm-row').hidden = !show;
+  page.querySelector('.danger .confirm-row').hidden = !show;
 }
 
 function bindPage() {
@@ -558,6 +704,7 @@ function bindPage() {
   page.addEventListener('input', () => {
     if (!editing || !$('contact-title')) return;
     updateTitle();
+    if (isNew) return; // a new contact is saved only when Save is pressed
     dirty = true;
     clearTimeout(timer);
     timer = setTimeout(save, SAVE_DELAY);
@@ -573,6 +720,11 @@ function bindPage() {
     if (button.dataset.add) addEntry(button.dataset.add);
     else if (button.dataset.act === 'edit') goTo(`#/contact/${contactId}/edit`);
     else if (button.dataset.act === 'done') finish(button);
+    else if (button.dataset.act === 'discard') discard();
+    else if (button.dataset.act === 'discard-no') showDiscardQuestion(false);
+    else if (button.dataset.act === 'discard-yes') discardYes(button);
+    else if (button.dataset.act === 'save-new') saveNew(button);
+    else if (button.dataset.act === 'remove-note') button.closest('.pending-note').remove();
     else if (button.dataset.act === 'labels') toggleMenu(button);
     else if (button.dataset.act === 'pick-label') pickLabel(button);
     else if (button.dataset.act === 'remove') removeEntry(button);

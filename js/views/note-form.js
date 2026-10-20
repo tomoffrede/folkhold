@@ -2,19 +2,23 @@
 //   #/add-note                 a new note (choose the contacts first)
 //   #/add-note/<contactId>     a new note for that contact (more can be added)
 //   #/note/<noteId>/<contactId>   edit a note, opened from that contact's page
+// Unsaved typing is kept as an encrypted draft on this device, so a reload does not lose it.
 
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
 import * as rich from '../richtext.js';
+import { saveDraft, loadDraft, clearDraft } from '../drafts.js';
 import { createPicker } from './contact-picker.js';
-import { createEditor } from './rich-editor.js';
+import { createNoteFields } from './note-fields.js';
 import { displayName } from './contacts.js';
 
 const $ = (id) => document.getElementById(id);
 const ID = '([0-9a-f-]+)';
+const DRAFT_DELAY = 500; // milliseconds of quiet after typing before the draft is kept
 
 let builtFor = null; // the address the page was last built for
+let draftTimer = null;
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -33,6 +37,10 @@ function parseRoute() {
 
 function backHref(route) {
   return route.contactId ? `#/contact/${route.contactId}` : '#/home';
+}
+
+function draftName(route) {
+  return route.mode === 'new' ? `new:${route.contactId || ''}` : `edit:${route.noteId}`;
 }
 
 // Runs a task while the button says "Working...", and shows a problem under the form instead of leaving the page.
@@ -57,111 +65,167 @@ function showError(errorEl, message) {
   errorEl.hidden = false;
 }
 
-function buildEditor(onInput) {
-  return createEditor({
-    placeholder: strings['note.textPlaceholder'],
-    label: strings['note.text'],
-    buttonLabels: { bold: strings['note.bold'], italic: strings['note.italic'], underline: strings['note.underline'] },
-    onInput,
-  });
+function makeError() {
+  const error = make('p', 'form-error');
+  error.setAttribute('role', 'alert');
+  error.hidden = true;
+  return error;
 }
 
-function buildTitleField(value) {
-  const label = make('label', 'field');
-  const input = make('input');
-  input.type = 'text';
-  input.autocomplete = 'off';
-  input.placeholder = strings['note.titlePlaceholder'];
-  input.setAttribute('aria-label', strings['note.titlePlaceholder']);
-  input.value = value || '';
-  label.append(input);
-  return { label, input };
+// Leaves the screen; the draft is dropped because the work is saved (or deliberately thrown away).
+function finish(route) {
+  clearTimeout(draftTimer);
+  clearDraft(draftName(route));
+  location.hash = backHref(route);
+}
+
+// The offer to bring back a draft: "Restore unsaved note" or "Discard".
+function draftBanner(route, restore) {
+  loadDraft(draftName(route)).then((draft) => {
+    const slot = $('draft-slot');
+    if (!draft || !slot || builtFor !== location.hash) return;
+    const box = make('div', 'prompt');
+    box.append(make('p', 'prompt-title', strings['note.draftFound']));
+    const actions = make('div', 'prompt-actions');
+    const yes = make('button', 'btn btn-primary btn-small', strings['note.draftRestore']);
+    const no = make('button', 'btn btn-secondary btn-small', strings['note.draftDiscard']);
+    yes.type = 'button';
+    no.type = 'button';
+    yes.addEventListener('click', () => {
+      restore(draft);
+      box.remove();
+    });
+    no.addEventListener('click', () => {
+      clearDraft(draftName(route));
+      box.remove();
+    });
+    actions.append(yes, no);
+    box.append(actions);
+    slot.append(box);
+  });
 }
 
 // ---------- a new note ----------
 
 function buildNew(page, route) {
   const preselected = route.contactId && store.get('contact', route.contactId) ? [route.contactId] : [];
-  const picker = createPicker({ selected: preselected });
-  const title = buildTitleField('');
-  const editor = buildEditor();
-  const error = make('p', 'form-error');
-  error.setAttribute('role', 'alert');
-  error.hidden = true;
+  const name = draftName(route);
+
+  const keepDraft = () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      const values = fields.get();
+      const empty = !values.title && rich.isEmpty(values.body) && !values.priority;
+      if (empty) clearDraft(name);
+      else saveDraft(name, { ...values, contactIds: picker.getSelected() });
+    }, DRAFT_DELAY);
+  };
+
+  const picker = createPicker({ selected: preselected, onChange: keepDraft });
+  const fields = createNoteFields({ onChange: keepDraft });
+  const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', strings['note.save']);
   save.type = 'button';
 
   const form = make('div', 'form');
-  form.append(picker.element, title.label, editor.element, error, save);
+  const slot = make('div');
+  slot.id = 'draft-slot';
+  form.append(slot, picker.element, fields.element, error, save);
   page.append(form);
 
   save.addEventListener('click', () =>
     runBusy(save, error, async () => {
       const contactIds = picker.getSelected();
-      const body = editor.getBody();
-      const titleText = title.input.value.trim();
+      const values = fields.get();
       if (contactIds.length === 0) return showError(error, strings['note.errNoContact']);
-      if (!titleText && rich.isEmpty(body)) return showError(error, strings['note.errEmpty']);
-      await notes.create({ title: titleText, body, contactIds });
+      if (!values.title && rich.isEmpty(values.body)) return showError(error, strings['note.errEmpty']);
+      clearTimeout(draftTimer);
+      await notes.create({ ...values, contactIds });
+      clearDraft(name);
       location.hash = `#/contact/${preselected[0] || contactIds[0]}`;
     }),
   );
 
-  if (preselected.length) editor.focus();
+  draftBanner(route, (draft) => {
+    fields.set(draft);
+    picker.setSelected(draft.contactIds || []);
+  });
+
+  if (preselected.length) fields.focus();
   else picker.element.querySelector('input').focus();
 }
 
 // ---------- editing a note ----------
 
 function buildEdit(page, route, note, contact) {
+  const name = draftName(route);
   const others = (note.contactIds || [])
     .filter((id) => id !== route.contactId)
     .map((id) => store.get('contact', id))
     .filter(Boolean);
 
-  const title = buildTitleField(note.title);
-  const editor = buildEditor();
-  editor.setBody(note.body || []);
-  const error = make('p', 'form-error');
-  error.setAttribute('role', 'alert');
-  error.hidden = true;
+  const original = { title: note.title || '', body: note.body || [], priority: note.priority || 0 };
+  const isChanged = (values) =>
+    values.title !== original.title || values.priority !== original.priority || !rich.sameBody(values.body, original.body);
+
+  const keepDraft = () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      const values = fields.get();
+      if (isChanged(values)) saveDraft(name, values);
+      else clearDraft(name);
+    }, DRAFT_DELAY);
+  };
+
+  const fields = createNoteFields({ ...original, onChange: keepDraft });
+  const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', strings['note.save']);
   save.type = 'button';
 
   const formWrap = make('div', 'form');
-  formWrap.append(make('p', 'hint', t('note.forLine', { name: displayName(contact) })));
+  const slot = make('div');
+  slot.id = 'draft-slot';
+  formWrap.append(slot, make('p', 'hint', t('note.forLine', { name: displayName(contact) })));
   if (others.length) {
     formWrap.append(make('p', 'hint', t('notes.alsoOn', { names: others.map(displayName).join(', ') })));
   }
-  formWrap.append(title.label, editor.element, error, save, buildDelete(route, note, contact, others, error));
   const promptWrap = make('div');
   promptWrap.hidden = true;
+  formWrap.append(fields.element, error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));
   page.append(formWrap, promptWrap);
 
   save.addEventListener('click', () =>
     runBusy(save, error, async () => {
-      const changes = { title: title.input.value.trim(), body: editor.getBody() };
+      const changes = fields.get();
       if (!changes.title && rich.isEmpty(changes.body)) return showError(error, strings['note.errEmpty']);
-      const unchanged = changes.title === (note.title || '') && rich.sameBody(changes.body, note.body);
-      if (unchanged) {
-        location.hash = backHref(route);
-        return;
-      }
+      if (!isChanged(changes)) return finish(route);
       if (others.length === 0) {
         await notes.saveEdit(note, changes, route.contactId, []);
-        location.hash = backHref(route);
-        return;
+        return finish(route);
       }
-      showPrompt({ route, note, others, changes, formWrap, promptWrap });
+      showChoice({
+        formWrap,
+        promptWrap,
+        title: strings['note.sharedTitle'],
+        text: strings['note.sharedText'],
+        confirmLabel: strings['note.saveChanges'],
+        others,
+        onConfirm: async (applied) => {
+          await notes.saveEdit(note, changes, route.contactId, applied);
+          finish(route);
+        },
+      });
     }),
   );
+
+  draftBanner(route, (draft) => fields.set(draft));
 }
 
-// The question shown when other contacts share the note: who gets the change?
-function showPrompt({ route, note, others, changes, formWrap, promptWrap }) {
+// The question shown when other contacts share the note: which of them get this (a change, or the deletion)?
+function showChoice({ formWrap, promptWrap, title, text, confirmLabel, danger, others, onConfirm }) {
   promptWrap.replaceChildren();
   const panel = make('div', 'prompt form');
-  panel.append(make('h3', 'prompt-title', strings['note.sharedTitle']), make('p', '', strings['note.sharedText']));
+  panel.append(make('h3', 'prompt-title', title), make('p', '', text));
 
   const list = make('div', 'prompt-list');
   const boxes = others.map((contact) => {
@@ -184,10 +248,8 @@ function showPrompt({ route, note, others, changes, formWrap, promptWrap }) {
   none.addEventListener('click', () => boxes.forEach((box) => (box.checked = false)));
   actions.append(all, none);
 
-  const error = make('p', 'form-error');
-  error.setAttribute('role', 'alert');
-  error.hidden = true;
-  const confirm = make('button', 'btn btn-primary btn-form', strings['note.saveChanges']);
+  const error = makeError();
+  const confirm = make('button', `btn ${danger ? 'btn-danger' : 'btn-primary'} btn-form`, confirmLabel);
   confirm.type = 'button';
   const back = make('button', 'link', strings['note.backToEditing']);
   back.type = 'button';
@@ -203,52 +265,54 @@ function showPrompt({ route, note, others, changes, formWrap, promptWrap }) {
     formWrap.hidden = false;
   });
   confirm.addEventListener('click', () =>
-    runBusy(confirm, error, async () => {
-      const applied = boxes.filter((box) => box.checked).map((box) => box.value);
-      await notes.saveEdit(note, changes, route.contactId, applied);
-      location.hash = backHref(route);
-    }),
+    runBusy(confirm, error, () => onConfirm(boxes.filter((box) => box.checked).map((box) => box.value))),
   );
 }
 
-// "Delete note": asks first. A note on several contacts can be removed from this contact only, or for everyone.
-function buildDelete(route, note, contact, others, errorEl) {
+// "Delete note". Unshared: one question. Shared: choose which other contacts lose it too (this contact always does).
+function buildDelete({ route, note, contact, others, error, formWrap, promptWrap }) {
   const wrap = make('div', 'danger');
   const ask = make('button', 'link link-danger', strings['note.delete']);
   ask.type = 'button';
-  const sure = make('div', 'confirm-row');
-  sure.hidden = true;
-  const shared = others.length > 0;
-  sure.append(make('span', 'confirm-text', shared ? t('note.deleteShared', { name: displayName(contact) }) : strings['note.deleteSure']));
 
-  const action = (text, className, task) => {
-    const button = make('button', `btn ${className} btn-small`, text);
-    button.type = 'button';
-    button.addEventListener('click', () =>
-      runBusy(button, errorEl, async () => {
-        await task();
-        location.hash = backHref(route);
+  if (others.length) {
+    ask.addEventListener('click', () =>
+      showChoice({
+        formWrap,
+        promptWrap,
+        title: strings['note.deleteSharedTitle'],
+        text: t('note.deleteSharedText', { name: displayName(contact) }),
+        confirmLabel: strings['note.deleteConfirm'],
+        danger: true,
+        others,
+        onConfirm: async (picked) => {
+          await notes.removeFromContacts(note, [route.contactId, ...picked]);
+          finish(route);
+        },
       }),
     );
-    return button;
-  };
+    wrap.append(ask);
+    return wrap;
+  }
+
+  const sure = make('div', 'confirm-row');
+  sure.hidden = true;
+  sure.append(make('span', 'confirm-text', strings['note.deleteSure']));
+  const yes = make('button', 'btn btn-danger btn-small', strings['note.deleteYes']);
+  yes.type = 'button';
+  yes.addEventListener('click', () =>
+    runBusy(yes, error, async () => {
+      await notes.removeEverywhere(note);
+      finish(route);
+    }),
+  );
   const keep = make('button', 'btn btn-secondary btn-small', strings['note.keep']);
   keep.type = 'button';
   keep.addEventListener('click', () => {
     sure.hidden = true;
     ask.hidden = false;
   });
-
-  if (shared) {
-    sure.append(
-      action(t('note.removeFrom', { name: displayName(contact) }), 'btn-secondary', () => notes.removeFromContact(note, route.contactId)),
-      action(strings['note.deleteAll'], 'btn-danger', () => notes.removeEverywhere(note)),
-    );
-  } else {
-    sure.append(action(strings['note.deleteYes'], 'btn-danger', () => notes.removeEverywhere(note)));
-  }
-  sure.append(keep);
-
+  sure.append(yes, keep);
   ask.addEventListener('click', () => {
     ask.hidden = true;
     sure.hidden = false;
@@ -261,6 +325,7 @@ function buildDelete(route, note, contact, others, errorEl) {
 
 function render() {
   const route = parseRoute();
+  clearTimeout(draftTimer);
   if (!route) {
     builtFor = null;
     return;

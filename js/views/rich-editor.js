@@ -34,18 +34,40 @@ export function createEditor({ placeholder, label, buttonLabels, onInput = () =>
     button.title = name;
     button.setAttribute('aria-label', name);
     button.setAttribute('aria-pressed', 'false');
-    // Pressing a button must not take the cursor out of the text.
+    // The format is applied the moment the button is touched, and the button never takes the selection away
+    // (on an iPhone a normal tap first moved the selection, so it took several taps).
     button.addEventListener('mousedown', (event) => event.preventDefault());
-    button.addEventListener('pointerdown', (event) => event.preventDefault());
-    button.addEventListener('click', () => {
-      editor.focus();
-      document.execCommand(command);
-      refreshButtons();
-      onInput();
+    button.addEventListener('touchstart', (event) => event.preventDefault(), { passive: false });
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      apply(command);
+    });
+    button.addEventListener('click', (event) => {
+      if (event.detail === 0) apply(command); // a click made with the keyboard (Enter or Space)
     });
     toolbar.append(button);
     return { command, button };
   });
+
+  // Remembers the last selection inside the text, in case the browser drops it when a button is touched.
+  let savedRange = null;
+  function inside() {
+    const selection = document.getSelection();
+    return selection.rangeCount > 0 && editor.contains(selection.anchorNode);
+  }
+  function apply(command) {
+    if (!inside()) {
+      editor.focus();
+      if (savedRange) {
+        const selection = document.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(savedRange);
+      }
+    }
+    document.execCommand(command);
+    refreshButtons();
+    onInput();
+  }
 
   // Shows which formats are on at the cursor.
   function refreshButtons() {
@@ -55,7 +77,17 @@ export function createEditor({ placeholder, label, buttonLabels, onInput = () =>
     });
   }
   document.addEventListener('selectionchange', () => {
-    if (element.isConnected) refreshButtons();
+    if (!element.isConnected) return;
+    if (inside()) savedRange = document.getSelection().getRangeAt(0).cloneRange();
+    refreshButtons();
+  });
+  // Ctrl+B, Ctrl+I, Ctrl+U (Cmd on a Mac).
+  editor.addEventListener('keydown', (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return;
+    const command = { b: 'bold', i: 'italic', u: 'underline' }[event.key.toLowerCase()];
+    if (!command) return;
+    event.preventDefault();
+    apply(command);
   });
 
   editor.addEventListener('focus', () => {

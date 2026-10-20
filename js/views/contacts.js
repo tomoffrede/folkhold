@@ -2,6 +2,7 @@
 
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
+import * as settings from '../settings.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
@@ -45,10 +46,19 @@ function personRow(contact) {
   return item;
 }
 
+// What the list is sorted by: the full name, or (in Settings) the last name first.
+function sortName(contact) {
+  if (settings.get('contactSort') === 'last') {
+    const last = contact.lastName || contact.firstName || contact.nickname || '';
+    return `${last} ${contact.firstName || ''}`;
+  }
+  return displayName(contact);
+}
+
 function renderList() {
   const contacts = store
     .list('contact')
-    .sort((a, b) => collator.compare(displayName(a), displayName(b)));
+    .sort((a, b) => collator.compare(sortName(a), sortName(b)));
   $('contacts-list').replaceChildren(...contacts.map(personRow));
   $('contacts-empty').hidden = !(loaded && contacts.length === 0);
 }
@@ -82,64 +92,12 @@ async function load() {
   renderList();
 }
 
-function showFormError(message) {
-  const el = $('contact-error');
-  el.textContent = message || '';
-  el.hidden = !message;
-}
-
-function bindForm() {
-  const form = $('contact-form');
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const fields = {};
-    for (const [key, id] of [
-      ['firstName', 'contact-first'],
-      ['lastName', 'contact-last'],
-      ['nickname', 'contact-nick'],
-    ]) {
-      const value = $(id).value.trim();
-      if (value) fields[key] = value;
-    }
-    if (Object.keys(fields).length === 0) {
-      showFormError(strings['addContact.errNeedName']);
-      return;
-    }
-
-    const button = form.querySelector('[type="submit"]');
-    const label = button.textContent;
-    button.disabled = true;
-    button.textContent = strings['auth.working'];
-    showFormError(null);
-    try {
-      await store.add('contact', fields);
-      renderList();
-      location.hash = '#/contacts';
-    } catch (error) {
-      showFormError(error.message);
-    } finally {
-      button.disabled = false;
-      button.textContent = label;
-    }
-  });
-
-  // Opening the form starts empty, with the cursor in the first field.
-  window.addEventListener('hashchange', () => {
-    if (location.hash !== '#/add-contact') return;
-    form.reset();
-    showFormError(null);
-    $('contact-first').focus();
-  });
-}
-
 export function initContacts() {
   document.querySelectorAll('[data-action="add-contact"]').forEach((el) => {
     el.addEventListener('click', () => {
       location.hash = '#/add-contact';
     });
   });
-  bindForm();
   document.addEventListener('folkhold:ready', load);
   document.addEventListener('folkhold:saved', renderList);
   // Coming back from a contact page: show the latest names.

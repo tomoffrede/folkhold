@@ -32,7 +32,12 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
   input.setAttribute('aria-label', strings['note.contacts']);
   const menu = make('ul', 'picker-menu');
   menu.hidden = true;
-  element.append(chips, input, menu);
+  const toggle = make('button', 'picker-toggle', '▾');
+  toggle.type = 'button';
+  toggle.setAttribute('aria-label', strings['note.showContacts']);
+  const field = make('div', 'picker-field');
+  field.append(input, toggle, menu);
+  element.append(chips, field);
 
   function nameOf(id) {
     const contact = store.get('contact', id);
@@ -105,10 +110,22 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
     menu.hidden = true;
   }
 
+  // The arrow opens or closes the list; the cursor stays in the field.
+  toggle.addEventListener('mousedown', (event) => event.preventDefault());
+  toggle.addEventListener('pointerdown', (event) => event.preventDefault());
+  toggle.addEventListener('click', () => {
+    if (!menu.hidden) {
+      closeMenu();
+    } else {
+      input.focus();
+      openMenu();
+    }
+  });
   input.addEventListener('focus', openMenu);
   input.addEventListener('click', openMenu);
   input.addEventListener('input', openMenu);
-  input.addEventListener('blur', closeMenu);
+  // A short delay, so that tapping an option (or the arrow) still counts before the list closes.
+  input.addEventListener('blur', () => setTimeout(closeMenu, 200));
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       closeMenu();
@@ -120,5 +137,12 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
   });
 
   renderChips();
-  return { element, getSelected: () => [...ids] };
+  return {
+    element,
+    getSelected: () => [...ids],
+    setSelected(list) {
+      ids.splice(0, ids.length, ...list.filter((id) => store.get('contact', id)));
+      renderChips();
+    },
+  };
 }

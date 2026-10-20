@@ -2,6 +2,7 @@
 
 import { strings, t } from '../strings.js';
 import * as auth from '../auth.js';
+import { clearAllDrafts } from '../drafts.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -71,6 +72,7 @@ function recoveryFileText() {
 }
 
 async function signOutAndReload() {
+  clearAllDrafts();
   await auth.signOut();
   location.hash = '';
   location.reload();
