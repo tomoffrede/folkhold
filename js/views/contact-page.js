@@ -4,6 +4,8 @@
 
 import { strings } from '../strings.js';
 import * as store from '../store.js';
+import * as notes from '../notes.js';
+import { renderNotesSection } from './contact-notes.js';
 import { displayName } from './contacts.js';
 
 const $ = (id) => document.getElementById(id);
@@ -106,6 +108,7 @@ function renderView(page, contact) {
     page.append(block);
   });
   if (!any) page.append(make('p', 'empty', strings['contact.nothingYet']));
+  page.append(renderNotesSection(contact));
 }
 
 // ---------- the editor ----------
@@ -534,6 +537,7 @@ async function deleteContact(button) {
   dirty = false;
   try {
     await queue;
+    await notes.detachContact(id);
     await store.remove('contact', id);
     goTo('#/contacts');
   } catch (error) {

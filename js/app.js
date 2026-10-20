@@ -5,8 +5,9 @@ import { initAuth } from './views/auth.js';
 import { initContacts } from './views/contacts.js';
 import { initContact } from './views/contact-page.js';
 import { initSettings } from './views/settings.js';
+import { initNoteForm } from './views/note-form.js';
 
-const SCREENS = ['home', 'contacts', 'add-contact', 'contact', 'upcoming', 'settings'];
+const SCREENS = ['home', 'contacts', 'add-contact', 'contact', 'note', 'upcoming', 'settings'];
 
 // Put the text from strings.js into every element that has a data-text attribute.
 function fillStrings() {
@@ -23,13 +24,15 @@ function fillStrings() {
 // Which screen the address asks for ("#/contacts" gives "contacts"). Unknown or empty gives "home".
 function currentScreen() {
   const name = location.hash.replace('#/', '').split('/')[0];
+  if (name === 'add-note') return 'note';
   return SCREENS.includes(name) ? name : 'home';
 }
 
 // Show that screen, hide the others, and mark the matching navigation item.
 function showScreen() {
   const name = currentScreen();
-  const navName = name === 'contact' || name === 'add-contact' ? 'contacts' : name;
+  const navName =
+    name === 'contact' || name === 'add-contact' ? 'contacts' : name === 'note' ? (location.hash.startsWith('#/add-note') && !location.hash.slice(11) ? 'home' : 'contacts') : name;
 
   document.querySelectorAll('.screen').forEach((el) => {
     el.hidden = el.dataset.screen !== name;
@@ -52,4 +55,5 @@ showScreen();
 initContacts();
 initContact();
 initSettings();
+initNoteForm();
 initAuth();
