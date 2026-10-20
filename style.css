@@ -1071,3 +1071,32 @@ a.btn {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
+
+/* Events */
+.kind-row {
+  flex-wrap: wrap;
+}
+
+.event-date {
+  margin: 0 0 var(--space-1);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.event-details {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.field textarea {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+}

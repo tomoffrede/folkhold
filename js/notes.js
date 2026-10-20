@@ -4,6 +4,7 @@
 // The order inside one priority is kept per contact, as a list of note ids ("noteOrder") on the contact.
 
 import * as store from './store.js';
+import * as linked from './linked.js';
 
 const NO_PRIORITY = 4;
 
@@ -42,57 +43,24 @@ export function get(id) {
   return store.get('note', id);
 }
 
-function fieldsOf(note) {
-  const { id, ...fields } = note;
-  return fields;
-}
-
 // Saves a new note for one or more contacts.
 export function create({ title, body, contactIds, priority }) {
-  const fields = { body, contactIds, createdAt: Date.now() };
-  if (title) fields.title = title;
-  if (priority) fields.priority = priority;
-  return store.add('note', fields);
+  return linked.create('note', { title, body, priority }, contactIds);
 }
 
-// Saves a changed note that was opened from the contact "originId".
-// "appliedIds": the other contacts that should get the change too. The rest keep a copy of the old note.
-export async function saveEdit(note, { title, body, priority }, originId, appliedIds) {
-  const others = (note.contactIds || []).filter((id) => id !== originId);
-  const left = others.filter((id) => !appliedIds.includes(id));
-
-  // The copy is made first, so nothing can be lost if the second step fails.
-  if (left.length) await store.add('note', { ...fieldsOf(note), contactIds: left });
-
-  const fields = {
-    ...fieldsOf(note),
-    body,
-    contactIds: [originId, ...others.filter((id) => appliedIds.includes(id))],
-    updatedAt: Date.now(),
-  };
-  if (title) fields.title = title;
-  else delete fields.title;
-  if (priority) fields.priority = priority;
-  else delete fields.priority;
-  await store.update('note', note.id, fields);
+// Saves a changed note that was opened from the contact "originId" (see linked.js).
+export function saveEdit(note, { title, body, priority }, originId, appliedIds) {
+  return linked.saveEdit('note', note, ['title', 'body', 'priority'], { title, body, priority }, originId, appliedIds);
 }
 
-// Takes some contacts off a note. If nobody is left, the note is deleted.
-export async function removeFromContacts(note, contactIds) {
-  const rest = (note.contactIds || []).filter((id) => !contactIds.includes(id));
-  if (rest.length === 0) await store.remove('note', note.id);
-  else await store.update('note', note.id, { ...fieldsOf(note), contactIds: rest });
-}
-
-export function removeFromContact(note, contactId) {
-  return removeFromContacts(note, [contactId]);
+export function removeFromContacts(note, contactIds) {
+  return linked.removeFromContacts('note', note, contactIds);
 }
 
 export function removeEverywhere(note) {
   return store.remove('note', note.id);
 }
 
-// Used when a contact is deleted: their notes lose them, and notes that belonged only to them are deleted.
-export async function detachContact(contactId) {
-  for (const note of listFor(contactId)) await removeFromContact(note, contactId);
+export function detachContact(contactId) {
+  return linked.detachContact('note', contactId);
 }

@@ -5,6 +5,9 @@
 import { strings } from '../strings.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
+import * as events from '../events.js';
+import { renderEventsSection } from './contact-events.js';
+import { createEventFields } from './event-fields.js';
 import { renderNotesSection } from './contact-notes.js';
 import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
@@ -116,7 +119,7 @@ function renderView(page, contact) {
     page.append(block);
   });
   if (!any) page.append(make('p', 'empty', strings['contact.nothingYet']));
-  page.append(renderNotesSection(contact));
+  page.append(renderEventsSection(contact), renderNotesSection(contact));
 }
 
 // ---------- the editor ----------
@@ -347,8 +350,11 @@ function renderEditor(page, contact) {
     noteChip.type = 'button';
     noteChip.dataset.add = 'note';
     noteChip.classList.add('chip-note'); // looks different from the detail chips above it
+    const eventChip = make('button', 'chip chip-note', strings['contact.chipEvent']);
+    eventChip.type = 'button';
+    eventChip.dataset.add = 'event';
     noteRow = make('div', 'chips chips-note');
-    noteRow.append(noteChip);
+    noteRow.append(eventChip, noteChip);
   }
 
   const danger = make('div', 'danger');
@@ -550,6 +556,10 @@ function addEntry(key) {
     addPendingNote();
     return;
   }
+  if (key === 'event') {
+    addPendingEvent();
+    return;
+  }
   const group = GROUPS.find((g) => g.key === key);
   const block = page.querySelector(`[data-group="${key}"]`);
   const row = entryRow(group);
@@ -575,8 +585,29 @@ function addPendingNote() {
   fields.focus();
 }
 
+// The same for an event: kept on the page and saved together with the contact.
+function addPendingEvent() {
+  const block = make('div', 'group pending-note pending-event');
+  const head = make('div', 'notes-head');
+  head.append(make('h3', 'group-title', strings['contact.newEvent']));
+  const remove = make('button', 'entry-remove', '×');
+  remove.type = 'button';
+  remove.dataset.act = 'remove-note';
+  remove.setAttribute('aria-label', strings['contact.removeEvent']);
+  head.append(remove);
+  const fields = createEventFields();
+  block.append(head, fields.element);
+  block.eventFields = fields;
+  $('pending-notes').append(block);
+  fields.focus();
+}
+
+function pendingEvents() {
+  return [...document.querySelectorAll('#pending-notes .pending-event')].map((block) => block.eventFields.get());
+}
+
 function pendingNotes() {
-  return [...document.querySelectorAll('#pending-notes .pending-note')].map((block) => block.noteFields.get());
+  return [...document.querySelectorAll('#pending-notes .pending-note:not(.pending-event)')].map((block) => block.noteFields.get());
 }
 
 // Is there anything on the page that differs from how the contact was when the editor opened (or, when new, anything at all)?
@@ -590,7 +621,10 @@ function canonical(value) {
 
 function hasChanges() {
   const { fields } = readFields();
-  if (isNew) return Object.keys(fields).length > 0 || pendingNotes().some((n) => n.title || !rich.isEmpty(n.body));
+  if (isNew) {
+    const blankEvent = (e) => !e.title && !e.details && e.blank;
+    return Object.keys(fields).length > 0 || pendingNotes().some((n) => n.title || !rich.isEmpty(n.body)) || pendingEvents().some((e) => !blankEvent(e));
+  }
   return canonical(fields) !== canonical(snapshot);
 }
 
@@ -637,12 +671,19 @@ async function saveNew(button) {
     setStatus(strings['contact.errBirthday'], true);
     return;
   }
+  const eventList = pendingEvents().filter((e) => e.title || e.details || !e.blank);
+  const badEvent = eventList.find((e) => !e.date);
+  if (badEvent) {
+    setStatus(strings[badEvent.problem === 'invalid' ? 'event.errDate' : 'event.errNeedDate'], true);
+    return;
+  }
   button.disabled = true;
   setStatus(strings['contact.saving']);
   try {
     if (!newId) newId = await store.add('contact', fields);
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
+    for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, contactIds: [newId] });
     goTo(`#/contact/${newId}`);
   } catch (error) {
     setStatus(error.message, true);
@@ -691,6 +732,7 @@ async function deleteContact(button) {
   try {
     await queue;
     await notes.detachContact(id);
+    await events.detachContact(id);
     await store.remove('contact', id);
     goTo('#/contacts');
   } catch (error) {

@@ -5,7 +5,7 @@ import { initAuth } from './views/auth.js';
 import { initContacts } from './views/contacts.js';
 import { initContact } from './views/contact-page.js';
 import { initSettings } from './views/settings.js';
-import { initNoteForm } from './views/note-form.js';
+import { initNoteForm } from './views/item-form.js';
 
 const SCREENS = ['home', 'contacts', 'contact', 'note', 'upcoming', 'settings'];
 
@@ -24,7 +24,7 @@ function fillStrings() {
 // Which screen the address asks for ("#/contacts" gives "contacts"). Unknown or empty gives "home".
 function currentScreen() {
   const name = location.hash.replace('#/', '').split('/')[0];
-  if (name === 'add-note') return 'note';
+  if (name === 'add-note' || name === 'add-event' || name === 'event') return 'note';
   if (name === 'add-contact') return 'contact';
   return SCREENS.includes(name) ? name : 'home';
 }
@@ -33,7 +33,7 @@ function currentScreen() {
 function showScreen() {
   const name = currentScreen();
   const navName =
-    name === 'contact' ? 'contacts' : name === 'note' ? (location.hash.startsWith('#/add-note') && !location.hash.slice(11) ? 'home' : 'contacts') : name;
+    name === 'contact' ? 'contacts' : name === 'note' ? (/^#\/add-(note|event)$/.test(location.hash) ? 'home' : 'contacts') : name;
 
   document.querySelectorAll('.screen').forEach((el) => {
     el.hidden = el.dataset.screen !== name;
