@@ -11,10 +11,24 @@ function show() {
     radio.checked = radio.value === value;
     radio.disabled = false;
   });
+  const lastMet = document.getElementById('setting-lastmet');
+  lastMet.checked = settings.get('showLastMet');
+  lastMet.disabled = false;
 }
 
 export function initSettings() {
   document.addEventListener('folkhold:data', show);
+  document.getElementById('setting-lastmet').addEventListener('change', async (event) => {
+    const message = document.getElementById('settings-message');
+    message.hidden = true;
+    try {
+      await settings.set('showLastMet', event.target.checked);
+    } catch (error) {
+      message.textContent = error.message;
+      message.hidden = false;
+      show();
+    }
+  });
   radios().forEach((radio) => {
     radio.addEventListener('change', async () => {
       const message = document.getElementById('settings-message');

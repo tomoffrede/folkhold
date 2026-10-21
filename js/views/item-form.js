@@ -12,7 +12,7 @@ import * as rich from '../richtext.js';
 import { saveDraft, loadDraft, clearDraft } from '../drafts.js';
 import { createPicker } from './contact-picker.js';
 import { createNoteFields } from './note-fields.js';
-import { createEventFields } from './event-fields.js';
+import { createEventFields, shortName } from './event-fields.js';
 import { displayName } from './contacts.js';
 
 const $ = (id) => document.getElementById(id);
@@ -31,9 +31,9 @@ const KINDS = {
   event: {
     api: events,
     makeFields: createEventFields,
-    pick: (v) => ({ title: v.title || '', details: v.details || '', date: v.date || null, repeat: Boolean(v.repeat) }),
+    pick: (v) => ({ title: v.title || '', details: v.details || '', date: v.date || null, repeat: Boolean(v.repeat), kind: v.kind === 'together' ? 'together' : '' }),
     isBlank: (v) => !v.title && !v.details && v.blank,
-    problem: (v) => (v.problem === 'invalid' ? strings['event.errDate'] : !v.date ? strings['event.errNeedDate'] : null),
+    problem: (v) => (v.date ? null : strings[`event.err.${v.problem || 'empty'}`]),
   },
 };
 
@@ -148,8 +148,15 @@ function buildNew(page, route) {
     }, DRAFT_DELAY);
   };
 
-  const picker = createPicker({ selected: preselected, onChange: keepDraft });
+  // An event's two choices carry the contact's first name (when exactly one contact is chosen).
+  const syncNames = () => {
+    if (!fields.setName) return;
+    const chosen = picker.getSelected().map((id) => store.get('contact', id)).filter(Boolean);
+    fields.setName(chosen.length === 1 ? shortName(chosen[0]) : '');
+  };
+  const picker = createPicker({ selected: preselected, onChange: () => { syncNames(); keepDraft(); } });
   const fields = kind.makeFields({ onChange: keepDraft });
+  syncNames();
   const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', S(route.kind, 'save'));
   save.type = 'button';
@@ -177,6 +184,7 @@ function buildNew(page, route) {
   draftBanner(route, (draft) => {
     fields.set(draft);
     picker.setSelected(draft.contactIds || []);
+    syncNames();
   });
 
   if (preselected.length) fields.focus();
@@ -206,6 +214,7 @@ function buildEdit(page, route, note, contact) {
   };
 
   const fields = kind.makeFields({ ...original, onChange: keepDraft });
+  if (fields.setName) fields.setName(shortName(contact));
   const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', S(route.kind, 'save'));
   save.type = 'button';

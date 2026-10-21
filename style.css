@@ -1100,3 +1100,205 @@ a.btn {
   line-height: 1.4;
   resize: vertical;
 }
+
+/* Collapsible sections */
+.sec {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sec-toggle {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sec-arrow {
+  display: inline-block;
+  width: 20px;
+  color: var(--color-muted);
+  transition: transform 0.15s;
+}
+
+.sec.is-closed .sec-arrow {
+  transform: rotate(-90deg);
+}
+
+.sec-count {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.sec-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+}
+
+.sec-preview {
+  margin: 0 0 var(--space-2) 28px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.sec-body {
+  margin-top: var(--space-2);
+}
+
+.sec-body > .group {
+  margin-top: var(--space-4);
+}
+
+.last-met {
+  margin: var(--space-2) 0 0;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Events: compact rows */
+.ev-row {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.ev-date {
+  flex: 0 0 84px;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+.ev-main {
+  font-weight: 700;
+}
+
+.ev-date small {
+  display: block;
+  color: var(--color-muted);
+}
+
+.ev-row.up .ev-main {
+  color: var(--color-accent);
+}
+
+.ev-row.past {
+  opacity: 0.75;
+}
+
+.ev-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ev-title {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ev-more {
+  display: block;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.dot.hollow {
+  border: 2px solid var(--color-muted);
+  background: transparent;
+}
+
+.see-all {
+  display: inline-block;
+  margin-top: var(--space-3);
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ev-group {
+  margin: var(--space-5) 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Event form: date reading and examples */
+.date-reading {
+  min-height: 1.3em;
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.date-reading.is-unsure {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.date-help-body {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card);
+}
+
+.date-help-title,
+.date-help-line {
+  margin: 2px 0;
+  font-size: 0.85rem;
+}
+
+.date-help-title {
+  font-weight: 700;
+}
+
+.date-help-line {
+  color: var(--color-muted);
+}
+
+.form > input[type="text"] {
+  height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 16px;
+}

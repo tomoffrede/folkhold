@@ -6,8 +6,9 @@ import { initContacts } from './views/contacts.js';
 import { initContact } from './views/contact-page.js';
 import { initSettings } from './views/settings.js';
 import { initNoteForm } from './views/item-form.js';
+import { initEventsPage } from './views/events-page.js';
 
-const SCREENS = ['home', 'contacts', 'contact', 'note', 'upcoming', 'settings'];
+const SCREENS = ['home', 'contacts', 'contact', 'events', 'note', 'upcoming', 'settings'];
 
 // Put the text from strings.js into every element that has a data-text attribute.
 function fillStrings() {
@@ -33,7 +34,7 @@ function currentScreen() {
 function showScreen() {
   const name = currentScreen();
   const navName =
-    name === 'contact' ? 'contacts' : name === 'note' ? (/^#\/add-(note|event)$/.test(location.hash) ? 'home' : 'contacts') : name;
+    name === 'contact' || name === 'events' ? 'contacts' : name === 'note' ? (/^#\/add-(note|event)$/.test(location.hash) ? 'home' : 'contacts') : name;
 
   document.querySelectorAll('.screen').forEach((el) => {
     el.hidden = el.dataset.screen !== name;
@@ -57,4 +58,5 @@ initContacts();
 initContact();
 initSettings();
 initNoteForm();
+initEventsPage();
 initAuth();

@@ -1,10 +1,10 @@
-// The fields of an event: title, date (as exact or as vague as you like), yearly repeat and details.
+// The fields of an event: title, who it is about ("their life" or "together"), a freely typed date, and details.
 // Used by the event screen and by the new-contact form.
-// createEventFields({ title, details, date, repeat, onChange }) returns { element, get(), set(values), focus() }.
-// get() returns { title, details, date, repeat, problem }, where problem is null, 'incomplete' or 'invalid'.
+// createEventFields({ title, details, date, repeat, kind, onChange }) returns { element, get(), set(values), focus(), setName(name) }.
+// get() returns { title, details, date, repeat, kind, problem, blank }: problem is null or a reason the date cannot be used.
 
-import { strings } from '../strings.js';
-import { PRECISIONS, needs, buildDate, monthNames } from '../dates.js';
+import { strings, t } from '../strings.js';
+import { parseDate, modernize } from '../dates.js';
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -13,12 +13,39 @@ function make(tag, className, text) {
   return node;
 }
 
-const PRECISION_LABELS = { day: 'event.pDay', monthDay: 'event.pMonthDay', month: 'event.pMonth', year: 'event.pYear' };
+// The name used in the two labels: a first name, else a nickname, else the whole name.
+export function shortName(contact) {
+  return contact.firstName || contact.nickname || contact.lastName || '';
+}
 
-export function createEventFields({ title = '', details = '', date = null, repeat = false, onChange = () => {} } = {}) {
+function remembered(name, fallback) {
+  try {
+    return localStorage.getItem(name) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function remember(name, value) {
+  try {
+    localStorage.setItem(name, value);
+  } catch {
+    // only a convenience
+  }
+}
+
+// The examples box is open the first few times, then folds into a small "Examples" link.
+function helpOpenNow() {
+  const seen = Number(remembered('folkhold-datehelp', '0')) + 1;
+  remember('folkhold-datehelp', String(seen));
+  return seen <= 3;
+}
+
+export function createEventFields({ title = '', details = '', date = null, repeat = false, kind, onChange = () => {} } = {}) {
   const element = make('div', 'form');
-  let precision = date ? date.precision : 'day';
+  let who = kind === undefined ? remembered('folkhold-lastkind', 'life') : kind === 'together' ? 'together' : 'life';
   let repeating = Boolean(repeat);
+  let name = '';
 
   const titleLabel = make('label', 'field');
   const titleInput = make('input');
@@ -29,52 +56,51 @@ export function createEventFields({ title = '', details = '', date = null, repea
   titleInput.addEventListener('input', () => onChange());
   titleLabel.append(titleInput);
 
-  // How exact the date is.
-  const kindRow = make('div', 'prio-row kind-row');
-  kindRow.append(make('span', 'prio-label', strings['event.dateKind']));
-  const kindButtons = PRECISIONS.map((value) => {
-    const button = make('button', 'chip prio-chip', strings[PRECISION_LABELS[value]]);
+  // Whose event it is: a switch of two choices.
+  const whoRow = make('div', 'prio-row');
+  const whoButtons = ['life', 'together'].map((value) => {
+    const button = make('button', 'chip prio-chip');
     button.type = 'button';
     button.addEventListener('click', () => {
-      precision = value;
-      refresh();
+      who = value;
+      if (kind === undefined) remember('folkhold-lastkind', value);
+      refreshWho();
       onChange();
     });
-    kindRow.append(button);
+    whoRow.append(button);
     return { value, button };
   });
+  function refreshWho() {
+    whoButtons.forEach(({ value, button }) => {
+      button.textContent = name ? t(`event.kind.${value}`, { name }) : strings[`event.kindNobody.${value}`];
+      button.setAttribute('aria-pressed', String(value === who));
+    });
+  }
 
-  const day = make('input');
-  day.type = 'number';
-  day.min = '1';
-  day.max = '31';
-  day.inputMode = 'numeric';
-  day.placeholder = strings['event.day'];
-  day.setAttribute('aria-label', strings['event.day']);
+  // The date: typed freely; the app shows how it understood it.
+  const dateInput = make('input');
+  dateInput.type = 'text';
+  dateInput.autocomplete = 'off';
+  dateInput.autocapitalize = 'none';
+  dateInput.spellcheck = false;
+  dateInput.placeholder = strings['event.datePlaceholder'];
+  dateInput.setAttribute('aria-label', strings['event.dateLabel']);
+  const reading = make('p', 'date-reading');
+  reading.setAttribute('aria-live', 'polite');
 
-  const month = make('select');
-  month.setAttribute('aria-label', strings['event.month']);
-  const none = make('option', '', strings['event.month']);
-  none.value = '';
-  month.append(none);
-  monthNames().forEach((name, index) => {
-    const option = make('option', '', name);
-    option.value = String(index + 1);
-    month.append(option);
+  const help = make('div', 'date-help');
+  const helpToggle = make('button', 'link', strings['event.examples']);
+  helpToggle.type = 'button';
+  const helpBody = make('div', 'date-help-body');
+  helpBody.append(make('p', 'date-help-title', strings['event.helpTitle']));
+  ['event.help1', 'event.help2', 'event.help3', 'event.help4'].forEach((key) => helpBody.append(make('p', 'date-help-line', strings[key])));
+  helpBody.hidden = !helpOpenNow();
+  helpToggle.hidden = !helpBody.hidden;
+  helpToggle.addEventListener('click', () => {
+    helpBody.hidden = false;
+    helpToggle.hidden = true;
   });
-
-  const year = make('input');
-  year.type = 'number';
-  year.inputMode = 'numeric';
-  year.placeholder = strings['event.year'];
-  year.setAttribute('aria-label', strings['event.year']);
-
-  const dateRow = make('div', 'birthday-row');
-  dateRow.append(day, month, year);
-  [day, month, year].forEach((field) => {
-    field.addEventListener('input', () => onChange());
-    field.addEventListener('change', () => onChange());
-  });
+  help.append(helpToggle, helpBody);
 
   const repeatLabel = make('label', 'check');
   const repeatBox = make('input');
@@ -84,7 +110,18 @@ export function createEventFields({ title = '', details = '', date = null, repea
     onChange();
   });
   repeatLabel.append(repeatBox, make('span', '', strings['event.repeat']));
-  const repeatNote = make('p', 'hint', strings['event.repeatsAuto']);
+
+  function refreshDate() {
+    const result = parseDate(dateInput.value);
+    reading.textContent = result.error ? (result.error === 'empty' ? '' : strings['event.readingUnsure']) : `→ ${result.reading}`;
+    reading.classList.toggle('is-unsure', Boolean(result.error));
+    repeatLabel.hidden = !(result.exact && !result.error);
+    repeatBox.checked = repeating && !repeatLabel.hidden;
+  }
+  dateInput.addEventListener('input', () => {
+    refreshDate();
+    onChange();
+  });
 
   const detailsLabel = make('label', 'field');
   const detailsInput = make('textarea');
@@ -94,50 +131,40 @@ export function createEventFields({ title = '', details = '', date = null, repea
   detailsInput.addEventListener('input', () => onChange());
   detailsLabel.append(detailsInput);
 
-  // Shows only the date boxes the chosen kind needs, and the repeat choice where it makes sense.
-  function refresh() {
-    kindButtons.forEach(({ value, button }) => button.setAttribute('aria-pressed', String(value === precision)));
-    const used = needs(precision);
-    day.hidden = !used.includes('day');
-    month.hidden = !used.includes('month');
-    year.hidden = !used.includes('year');
-    repeatLabel.hidden = precision !== 'day';
-    repeatNote.hidden = precision !== 'monthDay';
-    repeatBox.checked = repeating;
-  }
-
   function fill(values) {
     titleInput.value = values.title || '';
     detailsInput.value = values.details || '';
-    const d = values.date || values.parts || null; // 'parts': a half-typed date kept in a draft
-    precision = d ? d.precision : 'day';
-    day.value = d && d.day ? d.day : '';
-    month.value = d && d.month ? String(d.month) : '';
-    year.value = d && d.year ? d.year : '';
+    const d = modernize(values.date);
+    dateInput.value = (d && (d.src || d.text)) || values.dateText || '';
     repeating = Boolean(values.repeat);
-    refresh();
+    if (values.kind) who = values.kind === 'together' ? 'together' : 'life';
+    refreshWho();
+    refreshDate();
   }
 
-  element.append(titleLabel, kindRow, dateRow, repeatLabel, repeatNote, detailsLabel);
+  element.append(titleLabel, whoRow, dateInput, reading, help, repeatLabel, detailsLabel);
   fill({ title, details, date, repeat });
 
   return {
     element,
     get() {
-      const parts = { day: parseInt(day.value, 10) || null, month: parseInt(month.value, 10) || null, year: parseInt(year.value, 10) || null };
-      const untouched = !day.value && !month.value && !year.value;
-      const built = untouched ? { error: 'incomplete' } : buildDate(precision, parts);
+      const result = parseDate(dateInput.value);
       return {
         title: titleInput.value.trim(),
         details: detailsInput.value.trim(),
-        date: built.date || null,
-        repeat: precision === 'day' && repeating,
-        parts: { precision, ...parts },
-        problem: built.error || null,
-        blank: untouched,
+        date: result.error ? null : result.date,
+        dateText: dateInput.value,
+        repeat: Boolean(result.exact) && repeating,
+        kind: who,
+        problem: result.error || null,
+        blank: !dateInput.value.trim(),
       };
     },
     set: fill,
+    setName(value) {
+      name = value || '';
+      refreshWho();
+    },
     focus: () => titleInput.focus(),
   };
 }

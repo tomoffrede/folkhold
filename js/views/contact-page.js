@@ -2,12 +2,15 @@
 //   #/contact/<id>        the view
 //   #/contact/<id>/edit   the editor
 
-import { strings } from '../strings.js';
+import { strings, t } from '../strings.js';
+import * as settings from '../settings.js';
+import { collapsible } from './section.js';
+import { formatDate, lastTogether, relative } from '../dates.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
 import * as events from '../events.js';
 import { renderEventsSection } from './contact-events.js';
-import { createEventFields } from './event-fields.js';
+import { createEventFields, shortName } from './event-fields.js';
 import { renderNotesSection } from './contact-notes.js';
 import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
@@ -102,23 +105,31 @@ function renderView(page, contact) {
   head.append(titles, edit);
   page.append(head);
 
-  let any = false;
+  const lastMet = settings.get('showLastMet') ? lastTogether(events.listFor(contact.id)) : null;
+  if (lastMet) {
+    page.append(make('p', 'last-met', t('contact.lastMet', { when: formatDate(lastMet.event.date), ago: relative(lastMet.time) })));
+  }
+
+  const details = collapsible({ key: 'details', title: strings['contact.details'], defaultOpen: false, className: 'details' });
+  const previewParts = [];
   if (contact.birthday) {
-    any = true;
+    previewParts.push(strings['contact.birthday']);
     const block = make('div', 'group');
     block.append(make('h3', 'group-title', strings['contact.birthday']), infoItem('', make('span', 'info-value', formatBirthday(contact.birthday))));
-    page.append(block);
+    details.bodyEl.append(block);
   }
   GROUPS.forEach((group) => {
     const entries = contact[group.key] || [];
     if (!entries.length) return;
-    any = true;
+    previewParts.push(entries.length > 1 ? `${strings[group.heading]} ×${entries.length}` : strings[group.heading]);
     const block = make('div', 'group');
     block.append(make('h3', 'group-title', strings[group.heading]));
     entries.forEach((entry) => block.append(infoItem(entry.label, valueNode(group, entry.value))));
-    page.append(block);
+    details.bodyEl.append(block);
   });
-  if (!any) page.append(make('p', 'empty', strings['contact.nothingYet']));
+  if (!previewParts.length) details.bodyEl.append(make('p', 'empty', strings['contact.nothingYet']));
+  details.update({ preview: previewParts.length ? previewParts.join(' · ') : strings['contact.nothingYet'] });
+  page.append(details);
   page.append(renderEventsSection(contact), renderNotesSection(contact));
 }
 
@@ -383,6 +394,11 @@ function renderEditor(page, contact) {
   page.append(chips);
   if (noteRow) page.append(noteRow);
   if (isNew) {
+    const problem = make('p', 'form-error');
+    problem.id = 'contact-new-error';
+    problem.setAttribute('role', 'alert');
+    problem.hidden = true;
+    page.append(problem);
     const create = make('button', 'btn btn-primary btn-form done-bottom', strings['addContact.save']);
     create.type = 'button';
     create.dataset.act = 'save-new';
@@ -599,7 +615,18 @@ function addPendingEvent() {
   block.append(head, fields.element);
   block.eventFields = fields;
   $('pending-notes').append(block);
+  block.eventFields.setName(shortName(typedName()));
   fields.focus();
+}
+
+// The name typed so far in the new-contact form, used in the labels of its events.
+function typedName() {
+  const value = (key) => ($('contact-page').querySelector(`[data-field="${key}"]`) || { value: '' }).value.trim();
+  return { firstName: value('firstName'), nickname: value('nickname'), lastName: value('lastName') };
+}
+
+function syncEventNames() {
+  document.querySelectorAll('#pending-notes .pending-event').forEach((block) => block.eventFields.setName(shortName(typedName())));
 }
 
 function pendingEvents() {
@@ -661,20 +688,30 @@ async function discardYes(button) {
 }
 
 // New contact: save it, then its notes, then show its page.
+// Problems with a new contact are shown right above the Save button.
+function showNewError(message) {
+  const el = $('contact-new-error');
+  if (!el) return;
+  el.textContent = message || '';
+  el.hidden = !message;
+  if (message) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 async function saveNew(button) {
+  showNewError('');
   const { fields, problem } = readFields();
   if (!NAME_KEYS.some((key) => fields[key])) {
-    setStatus(strings['contact.errNeedName'], true);
+    showNewError(strings['contact.errNeedName']);
     return;
   }
   if (problem) {
-    setStatus(strings['contact.errBirthday'], true);
+    showNewError(strings['contact.errBirthday']);
     return;
   }
   const eventList = pendingEvents().filter((e) => e.title || e.details || !e.blank);
   const badEvent = eventList.find((e) => !e.date);
   if (badEvent) {
-    setStatus(strings[badEvent.problem === 'invalid' ? 'event.errDate' : 'event.errNeedDate'], true);
+    showNewError(strings[`event.err.${badEvent.problem || 'empty'}`]);
     return;
   }
   button.disabled = true;
@@ -683,10 +720,10 @@ async function saveNew(button) {
     if (!newId) newId = await store.add('contact', fields);
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
-    for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, contactIds: [newId] });
+    for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
     goTo(`#/contact/${newId}`);
   } catch (error) {
-    setStatus(error.message, true);
+    showNewError(error.message);
     button.disabled = false;
   }
 }
@@ -753,6 +790,7 @@ function bindPage() {
   page.addEventListener('input', () => {
     if (!editing || !$('contact-title')) return;
     updateTitle();
+    if (isNew) syncEventNames();
     if (isNew) return; // a new contact is saved only when Save is pressed
     dirty = true;
     clearTimeout(timer);

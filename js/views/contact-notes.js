@@ -5,6 +5,7 @@ import * as store from '../store.js';
 import * as notes from '../notes.js';
 import * as rich from '../richtext.js';
 import { displayName } from './contacts.js';
+import { collapsible } from './section.js';
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -46,16 +47,16 @@ function arrow(text, label, disabled, onClick) {
 
 export function renderNotesSection(contact) {
   let arranging = false;
-  const section = make('div', 'group notes');
+  const section = collapsible({ key: 'notes', title: strings['notes.title'], className: 'notes' });
+  const { actionsEl, bodyEl } = section;
 
   function build() {
-    section.replaceChildren();
+    bodyEl.replaceChildren();
+    actionsEl.replaceChildren();
     const list = notes.listFor(contact.id);
     if (list.length < 2) arranging = false;
+    section.update({ count: list.length });
 
-    const head = make('div', 'notes-head');
-    head.append(make('h3', 'group-title', strings['notes.title']));
-    const buttons = make('div', 'notes-buttons');
     if (list.length >= 2) {
       const arrange = make('button', 'btn btn-secondary btn-small', strings[arranging ? 'notes.arrangeDone' : 'notes.arrange']);
       arrange.type = 'button';
@@ -63,25 +64,23 @@ export function renderNotesSection(contact) {
         arranging = !arranging;
         build();
       });
-      buttons.append(arrange);
+      actionsEl.append(arrange);
     }
     if (!arranging) {
       const add = make('a', 'btn btn-secondary btn-small', strings['notes.add']);
       add.href = `#/add-note/${contact.id}`;
-      buttons.append(add);
+      actionsEl.append(add);
     }
-    head.append(buttons);
-    section.append(head);
 
-    if (list.length === 0) section.append(make('p', 'empty', strings['notes.empty']));
-    if (arranging) section.append(make('p', 'hint', strings['notes.arrangeHint']));
+    if (list.length === 0) bodyEl.append(make('p', 'empty', strings['notes.empty']));
+    if (arranging) bodyEl.append(make('p', 'hint', strings['notes.arrangeHint']));
 
     list.forEach((note, index) => {
       if (!arranging) {
         const card = make('a', 'note-card');
         card.href = `#/note/${note.id}/${contact.id}`;
         cardContent(card, note, contact);
-        section.append(card);
+        bodyEl.append(card);
         return;
       }
       const same = (other) => other && (other.priority || 0) === (note.priority || 0);
@@ -95,15 +94,13 @@ export function renderNotesSection(contact) {
           build();
         }
       };
-      row.append(
-        card,
-        make('div', 'move-col'),
-      );
-      row.lastChild.append(
+      const column = make('div', 'move-col');
+      column.append(
         arrow('▲', strings['notes.moveUp'], !same(list[index - 1]), () => move(-1)),
         arrow('▼', strings['notes.moveDown'], !same(list[index + 1]), () => move(1)),
       );
-      section.append(row);
+      row.append(card, column);
+      bodyEl.append(row);
     });
   }
 

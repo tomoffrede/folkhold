@@ -1,11 +1,11 @@
-// Events. An event looks like: { title?, details?, date: {precision, ...}, repeat?, contactIds, createdAt, updatedAt? }.
+// Events. An event looks like: { title?, details?, date, repeat?, kind? ('together'; no kind means "their life"), contactIds, createdAt, updatedAt? }.
 // See dates.js for "date". Linked to several contacts like notes (see linked.js).
 
 import * as store from './store.js';
 import * as linked from './linked.js';
 import { sortEvents } from './dates.js';
 
-const MANAGED = ['title', 'details', 'date', 'repeat'];
+const MANAGED = ['title', 'details', 'date', 'repeat', 'kind'];
 
 export function listFor(contactId) {
   return sortEvents(linked.listOf('event', contactId));
@@ -15,12 +15,12 @@ export function get(id) {
   return store.get('event', id);
 }
 
-export function create({ title, details, date, repeat, contactIds }) {
-  return linked.create('event', { title, details, date, repeat }, contactIds);
+export function create({ title, details, date, repeat, kind, contactIds }) {
+  return linked.create('event', { title, details, date, repeat, kind: kind === 'together' ? 'together' : '' }, contactIds);
 }
 
-export function saveEdit(event, { title, details, date, repeat }, originId, appliedIds) {
-  return linked.saveEdit('event', event, MANAGED, { title, details, date, repeat }, originId, appliedIds);
+export function saveEdit(event, { title, details, date, repeat, kind }, originId, appliedIds) {
+  return linked.saveEdit('event', event, MANAGED, { title, details, date, repeat, kind: kind === 'together' ? 'together' : '' }, originId, appliedIds);
 }
 
 export function removeFromContacts(event, contactIds) {
