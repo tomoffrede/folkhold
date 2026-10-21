@@ -5,7 +5,7 @@
 import { strings, t } from '../strings.js';
 import * as settings from '../settings.js';
 import { collapsible } from './section.js';
-import { formatDate, lastTogether, relative } from '../dates.js';
+import { formatDate, lastTogether, relative, parseDate } from '../dates.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
 import * as events from '../events.js';
@@ -28,7 +28,7 @@ const GROUPS = [
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
-const MANAGED = [...NAME_KEYS, 'birthday', ...GROUPS.map((group) => group.key)];
+const MANAGED = [...NAME_KEYS, 'birthday', 'met', ...GROUPS.map((group) => group.key)];
 const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'short' }));
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }));
 
@@ -116,6 +116,12 @@ function renderView(page, contact) {
     previewParts.push(strings['contact.birthday']);
     const block = make('div', 'group');
     block.append(make('h3', 'group-title', strings['contact.birthday']), infoItem('', make('span', 'info-value', formatBirthday(contact.birthday))));
+    details.bodyEl.append(block);
+  }
+  if (contact.met) {
+    previewParts.push(strings['contact.met']);
+    const block = make('div', 'group');
+    block.append(make('h3', 'group-title', strings['contact.met']), infoItem('', make('span', 'info-value', formatDate(contact.met))));
     details.bodyEl.append(block);
   }
   GROUPS.forEach((group) => {
@@ -303,6 +309,51 @@ function birthdayBlock(birthday) {
   return block;
 }
 
+// "Met": when you first met, typed freely like an event date (a year is enough).
+function metBlock(met) {
+  const block = make('div', 'group');
+  block.dataset.group = 'met';
+  block.hidden = !met;
+  const input = make('input');
+  input.type = 'text';
+  input.autocomplete = 'off';
+  input.autocapitalize = 'none';
+  input.spellcheck = false;
+  input.dataset.part = 'met';
+  input.placeholder = strings['contact.metPlaceholder'];
+  input.setAttribute('aria-label', strings['contact.met']);
+  input.value = met ? met.src || met.text || '' : '';
+  const remove = make('button', 'entry-remove', '×');
+  remove.type = 'button';
+  remove.dataset.act = 'remove-met';
+  remove.setAttribute('aria-label', strings['contact.remove']);
+  const row = make('div', 'met-row');
+  row.append(input, remove);
+  const reading = make('p', 'date-reading met-reading');
+  block.append(make('h3', 'group-title', strings['contact.met']), row, reading);
+  showMetReading(block);
+  return block;
+}
+
+// Reads the "Met" box. Returns { date } or { problem: the text key of what is wrong }; an empty box is neither.
+function readMet(block) {
+  const text = block.querySelector('[data-part="met"]').value;
+  if (!text.trim()) return {};
+  const result = parseDate(text);
+  if (result.error) return { problem: `event.err.${result.error}` };
+  if (result.yearly) return { problem: 'event.err.needYear' }; // a day and month alone is not a time you met
+  return { date: result.date };
+}
+
+function showMetReading(block) {
+  const text = block.querySelector('[data-part="met"]').value;
+  const result = parseDate(text);
+  const reading = block.querySelector('.met-reading');
+  const bad = result.error || result.yearly;
+  reading.textContent = !text.trim() ? '' : bad ? strings[result.error === 'needYear' || result.yearly ? 'event.err.needYear' : 'event.readingUnsure'] : `→ ${result.reading}`;
+  reading.classList.toggle('is-unsure', Boolean(bad));
+}
+
 function doneButton(className) {
   const done = make('button', className, strings['contact.done']);
   done.type = 'button';
@@ -356,6 +407,11 @@ function renderEditor(page, contact) {
   birthdayChip.dataset.add = 'birthday';
   birthdayChip.hidden = Boolean(contact.birthday);
   chips.append(birthdayChip);
+  const metChip = make('button', 'chip', strings['contact.chipMet']);
+  metChip.type = 'button';
+  metChip.dataset.add = 'met';
+  metChip.hidden = Boolean(contact.met);
+  chips.append(metChip);
   if (isNew) {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
@@ -385,7 +441,7 @@ function renderEditor(page, contact) {
 
   page.append(head, discardRow, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
-  page.append(birthdayBlock(contact.birthday));
+  page.append(birthdayBlock(contact.birthday), metBlock(contact.met));
   if (isNew) {
     const pending = make('div', 'pending-notes');
     pending.id = 'pending-notes';
@@ -501,12 +557,18 @@ function readFields() {
     if (entries.length) fields[group.key] = entries;
   });
 
-  let problem = false;
+  let problem = null; // the text key of what could not be saved, if anything
   const block = page.querySelector('[data-group="birthday"]');
   if (!block.hidden) {
     const result = readBirthday(block);
     if (result.birthday) fields.birthday = result.birthday;
-    problem = result.problem;
+    if (result.problem) problem = 'contact.errBirthday';
+  }
+  const metBox = page.querySelector('[data-group="met"]');
+  if (!metBox.hidden) {
+    const result = readMet(metBox);
+    if (result.date) fields.met = result.date;
+    if (result.problem && !problem) problem = result.problem;
   }
   return { fields, problem };
 }
@@ -566,6 +628,13 @@ function addEntry(key) {
     block.hidden = false;
     page.querySelector('[data-add="birthday"]').hidden = true;
     block.querySelector('[data-part="day"]').focus();
+    return;
+  }
+  if (key === 'met') {
+    const block = page.querySelector('[data-group="met"]');
+    block.hidden = false;
+    page.querySelector('[data-add="met"]').hidden = true;
+    block.querySelector('[data-part="met"]').focus();
     return;
   }
   if (key === 'note') {
@@ -705,7 +774,7 @@ async function saveNew(button) {
     return;
   }
   if (problem) {
-    showNewError(strings['contact.errBirthday']);
+    showNewError(strings[problem]);
     return;
   }
   const eventList = pendingEvents().filter((e) => e.title || e.details || !e.blank);
@@ -733,6 +802,17 @@ function removeEntry(button) {
   const block = row.closest('.group');
   row.remove();
   if (!block.querySelector('.entry')) block.hidden = true;
+  dirty = true;
+  save();
+}
+
+function removeMet() {
+  const page = $('contact-page');
+  const block = page.querySelector('[data-group="met"]');
+  block.querySelector('[data-part="met"]').value = '';
+  showMetReading(block);
+  block.hidden = true;
+  page.querySelector('[data-add="met"]').hidden = false;
   dirty = true;
   save();
 }
@@ -787,10 +867,11 @@ function showDeleteQuestion(show) {
 function bindPage() {
   const page = $('contact-page');
 
-  page.addEventListener('input', () => {
+  page.addEventListener('input', (event) => {
     if (!editing || !$('contact-title')) return;
     updateTitle();
     if (isNew) syncEventNames();
+    if (event.target.dataset && event.target.dataset.part === 'met') showMetReading(event.target.closest('[data-group="met"]'));
     if (isNew) return; // a new contact is saved only when Save is pressed
     dirty = true;
     clearTimeout(timer);
@@ -816,6 +897,7 @@ function bindPage() {
     else if (button.dataset.act === 'pick-label') pickLabel(button);
     else if (button.dataset.act === 'remove') removeEntry(button);
     else if (button.dataset.act === 'remove-birthday') removeBirthday();
+    else if (button.dataset.act === 'remove-met') removeMet();
     else if (button.dataset.act === 'delete') showDeleteQuestion(true);
     else if (button.dataset.act === 'delete-no') showDeleteQuestion(false);
     else if (button.dataset.act === 'delete-yes') deleteContact(button);

@@ -47,6 +47,11 @@ const monthShift = (y, m, step) => {
 
 // ---------- reading what was typed ----------
 
+// A two-digit year: up to this year's last two digits means 20xx ("24" is 2024), above it 19xx ("95" is 1995).
+function expandYear(n) {
+  return n + (n <= new Date().getFullYear() % 100 ? 2000 : 1900);
+}
+
 function validYear(year) {
   return year >= 1900 && year <= 2100;
 }
@@ -78,16 +83,20 @@ function describe(p) {
 // One date without a range. "ctx" can hold a year to use when the text has none (for the first half of a range).
 function parseSingle(raw) {
   const s = raw.trim();
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const now = new Date();
+  const relativeDay = { today: 0, yesterday: -1, tomorrow: 1 }[s];
+  if (relativeDay !== undefined) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + relativeDay);
+    return describe({ kind: 'exact', y: day.getFullYear(), m: day.getMonth() + 1, d: day.getDate() });
+  }
+  let m = s.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
   if (m) return describe({ kind: 'exact', y: +m[1], m: +m[2], d: +m[3] });
-  m = s.match(/^(\d{4})-(\d{1,2})$/);
+  m = s.match(/^(\d{4})[./-](\d{1,2})$/);
   if (m && +m[2] >= 1 && +m[2] <= 12) return describe({ kind: 'month', y: +m[1], m: +m[2] });
   m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
-  if (m) {
-    let y = +m[3];
-    if (m[3].length === 2) y += y <= (new Date().getFullYear() % 100) ? 2000 : 1900;
-    return describe({ kind: 'exact', y, m: +m[2], d: +m[1] });
-  }
+  if (m) return describe({ kind: 'exact', y: m[3].length === 2 ? expandYear(+m[3]) : +m[3], m: +m[2], d: +m[1] });
+  m = s.match(/^(\d{1,2})[./](\d{2})$/);
+  if (m && +m[2] > 12) return describe({ kind: 'month', y: expandYear(+m[2]), m: +m[1] }); // "3/24" can only be March 2024
   m = s.match(/^(\d{1,2})[./](\d{4})$/);
   if (m) return describe({ kind: 'month', y: +m[2], m: +m[1] });
   m = s.match(/^(\d{1,2})[./](\d{1,2})\.?$/);
@@ -112,14 +121,26 @@ function parseSingle(raw) {
   let season = null;
   let day = null;
   let year = null;
+  const shorts = []; // one- or two-digit numbers: a day or a short year, depending on the words around them
   for (const word of words) {
     if (MONTH_LOOKUP[word] && !month && !season) month = MONTH_LOOKUP[word];
     else if (SEASONS[word] && !month && !season) season = SEASONS[word];
     else if (/^\d{4}$/.test(word) && year === null) year = +word;
-    else if (/^\d{1,2}$/.test(word) && day === null) day = +word;
+    else if (/^['’]?\d{1,2}$/.test(word)) shorts.push({ n: +word.replace(/['’]/, ''), apostrophe: /^['’]/.test(word) });
     else return { error: 'unknown' };
   }
   if (!words.length) return { error: 'unknown' };
+  // After early/mid/late or a season, or with no month, a short number can only be a year: "mid march 24" is March 2024.
+  // Otherwise the first one is the day, unless it has an apostrophe or is above 31 ("march 95"), and a second one is the year.
+  let short = null;
+  const rest = [...shorts];
+  if (rest.length) {
+    const dayAllowed = month && !part && !season;
+    if (dayAllowed && !rest[0].apostrophe && rest[0].n <= 31) day = rest.shift().n;
+    if (rest.length) short = rest.shift();
+    if (rest.length || (short && year !== null)) return { error: 'unknown' };
+    if (short) year = expandYear(short.n);
+  }
   if (!month && !season) {
     if (part && year && day === null) return describe({ kind: 'year', y: year, part });
     return { error: 'unknown' };
@@ -189,6 +210,10 @@ export function parseDate(input) {
   let range = null;
   if (single.error && /-|\bto\b|\buntil\b/.test(text)) {
     const cut = text.split(/\s*(?:-|\bto\b|\buntil\b)\s*/);
+    // A short year on the right half: "2019-21" and "june-august 22".
+    if (cut.length === 2 && /^\d{2}$/.test(cut[1]) && /^\d{4}$/.test(cut[0])) cut[1] = String(Math.floor(+cut[0] / 100) * 100 + +cut[1]);
+    const short = cut.length === 2 && cut[1].match(/^([a-z]+)\s+(\d{2})$/);
+    if (short && /^[a-z]+$/.test(cut[0]) && MONTH_LOOKUP[short[1]]) cut[1] = `${short[1]} ${expandYear(+short[2])}`;
     if (cut.length === 2 && cut[0] && cut[1]) {
       const right = parseSingle(cut[1]);
       let left = parseSingle(cut[0]);

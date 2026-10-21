@@ -6,6 +6,7 @@ import * as events from '../events.js';
 import { dateLines, nextOccurrence, relative, repeats, span, startOfToday } from '../dates.js';
 import { displayName } from './contacts.js';
 import { collapsible } from './section.js';
+import { personIcon } from './icons.js';
 
 const LIMIT = 5; // events shown on the contact page; the rest are on the "See all" page
 
@@ -39,7 +40,8 @@ export function eventRow(event, contact, { showYear = true } = {}) {
   const text = make('div', 'ev-text');
   const together = event.kind === 'together';
   const title = make('b', 'ev-title');
-  const dot = make('span', `dot${together ? '' : ' hollow'}`);
+  const dot = make('span', 'who');
+  dot.append(personIcon(together ? 2 : 1));
   dot.setAttribute('role', 'img');
   dot.setAttribute('aria-label', t(`event.kind.${together ? 'together' : 'life'}`, { name: contact.firstName || contact.nickname || displayName(contact) }));
   title.append(dot, document.createTextNode(event.title || strings['event.untitled']));

@@ -5,6 +5,7 @@
 
 import { strings, t } from '../strings.js';
 import { parseDate, modernize } from '../dates.js';
+import { personIcon } from './icons.js';
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -72,7 +73,7 @@ export function createEventFields({ title = '', details = '', date = null, repea
   });
   function refreshWho() {
     whoButtons.forEach(({ value, button }) => {
-      button.textContent = name ? t(`event.kind.${value}`, { name }) : strings[`event.kindNobody.${value}`];
+      button.replaceChildren(personIcon(value === 'together' ? 2 : 1), name ? t(`event.kind.${value}`, { name }) : strings[`event.kindNobody.${value}`]);
       button.setAttribute('aria-pressed', String(value === who));
     });
   }

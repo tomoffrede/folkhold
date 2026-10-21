@@ -441,7 +441,7 @@ a.person {
 }
 
 .save-status {
-  min-height: 20px;
+  min-height: 40px; /* two lines, so a longer message never moves the buttons below it (a tap would then miss) */
   margin: var(--space-1) 0 0;
   font-size: 14px;
   color: var(--color-muted);
@@ -1301,4 +1301,50 @@ a.btn {
   color: var(--color-text);
   font-family: inherit;
   font-size: 16px;
+}
+
+/* Person symbols (one person = their life, two = together) */
+.who-icon {
+  width: auto;
+  height: 14px;
+  margin-right: 6px;
+  fill: currentColor;
+  vertical-align: -2px;
+}
+
+.who {
+  color: var(--color-primary);
+}
+
+.prio-chip .who-icon {
+  height: 16px;
+}
+
+/* Space above an error message in the new-contact form, so it never touches the chips */
+#contact-new-error {
+  margin-top: var(--space-5);
+}
+
+/* "Met" box */
+.met-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.met-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.met-reading {
+  margin: var(--space-2) 0 0;
 }
