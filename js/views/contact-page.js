@@ -10,6 +10,8 @@ import * as store from '../store.js';
 import * as notes from '../notes.js';
 import * as events from '../events.js';
 import { renderEventsSection } from './contact-events.js';
+import * as birthdays from '../birthdays.js';
+import { showToast } from './toast.js';
 import { createEventFields, shortName } from './event-fields.js';
 import { createTagInput } from './tag-input.js';
 import * as tags from '../tags.js';
@@ -811,6 +813,16 @@ async function saveNew(button) {
     showNewError(strings[`event.err.${badEvent.problem || 'empty'}`]);
     return;
   }
+  // A pending event that is really this person's birthday becomes their birthday detail.
+  let movedBirthday = null;
+  if (!fields.birthday && eventList.length) {
+    const found = eventList.find((e) => birthdays.detect(e, fields));
+    if (found) {
+      movedBirthday = found;
+      fields.birthday = birthdays.detect(found, fields);
+      eventList.splice(eventList.indexOf(found), 1);
+    }
+  }
   button.disabled = true;
   setStatus(strings['contact.saving']);
   try {
@@ -823,6 +835,7 @@ async function saveNew(button) {
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
     for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
     goTo(`#/contact/${newId}`);
+    if (movedBirthday) showToast(t('birthday.saved', { name: displayName(fields), date: formatDate(movedBirthday.date) }));
   } catch (error) {
     showNewError(error.message);
     button.disabled = false;

@@ -3,7 +3,7 @@
 
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
-import { daysInMonth, formatDate, nextOccurrence, relative, span, startOfToday } from '../dates.js';
+import { daysInMonth, formatDate, isSingleDay, nextOccurrence, relative, startOfToday } from '../dates.js';
 import { displayName } from './contacts.js';
 
 const RANGES = [30, 90, 365, 0]; // days; 0 means everything that is coming
@@ -37,11 +37,9 @@ export function collect(limitDays, today = startOfToday()) {
     if (next === null || next > end) return;
     const contacts = (event.contactIds || []).map((id) => store.get('contact', id)).filter(Boolean);
     if (!contacts.length) return;
-    const range = span(event.date);
-    const exact = !range || range.earliest === range.latest || nextOccurrenceIsYearly(event);
     items.push({
       ts: next,
-      exact,
+      exact: isSingleDay(event),
       label: formatDate(event.date),
       title: event.title || strings['event.untitled'],
       names: contacts.map(displayName).join(', '),
@@ -72,10 +70,6 @@ export function collect(limitDays, today = startOfToday()) {
   });
 
   return items.sort((a, b) => a.ts - b.ts);
-}
-
-function nextOccurrenceIsYearly(event) {
-  return Boolean(event.repeat) || Boolean(event.date && event.date.yearly);
 }
 
 function row(item, today) {

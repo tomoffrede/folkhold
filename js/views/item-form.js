@@ -14,6 +14,9 @@ import { createPicker } from './contact-picker.js';
 import { createNoteFields } from './note-fields.js';
 import { createEventFields, shortName } from './event-fields.js';
 import { displayName } from './contacts.js';
+import * as birthdays from '../birthdays.js';
+import { formatDate } from '../dates.js';
+import { showToast } from './toast.js';
 
 const $ = (id) => document.getElementById(id);
 const ID = '([0-9a-f-]+)';
@@ -60,8 +63,26 @@ function parseRoute() {
   return null;
 }
 
+// The page an event or note was opened from, when that was Home or Upcoming: "Back" and the end of saving go there.
+let origin = null;
+
 function backHref(route) {
+  if (route.mode === 'edit' && origin) return origin;
   return route.contactId ? `#/contact/${route.contactId}` : '#/home';
+}
+
+// A new or changed event that is really a birthday goes into the contact's details instead. Returns true when it did.
+async function moveBirthday(route, values, contact, existing) {
+  if (route.kind !== 'event' || !contact) return false;
+  const birthday = birthdays.detect(values, contact);
+  if (!birthday) return false;
+  const result = await birthdays.save(contact, birthday);
+  if (existing) await events.removeEverywhere(existing);
+  clearTimeout(draftTimer);
+  clearDraft(draftName(route));
+  location.hash = `#/contact/${contact.id}`;
+  showToast(t(`birthday.${result}`, { name: displayName(contact), date: formatDate(values.date) }));
+  return true;
 }
 
 function draftName(route) {
@@ -175,6 +196,7 @@ function buildNew(page, route) {
       const mistake = kind.problem(values);
       if (mistake) return showError(error, mistake);
       clearTimeout(draftTimer);
+      if (contactIds.length === 1 && (await moveBirthday(route, values, store.get('contact', contactIds[0]), null))) return;
       await kind.api.create({ ...kind.pick(values), contactIds });
       clearDraft(name);
       location.hash = `#/contact/${preselected[0] || contactIds[0]}`;
@@ -238,6 +260,7 @@ function buildEdit(page, route, note, contact) {
       if (mistake) return showError(error, mistake);
       if (!isChanged(changes)) return finish(route);
       if (others.length === 0) {
+        if (await moveBirthday(route, changes, contact, note)) return;
         await kind.api.saveEdit(note, kind.pick(changes), route.contactId, []);
         return finish(route);
       }
@@ -405,7 +428,15 @@ export function initNoteForm() {
       });
     });
   });
-  window.addEventListener('hashchange', render);
+  window.addEventListener('hashchange', (event) => {
+    // Remember Home or Upcoming as the page to go back to, when an event is opened from there.
+    if (parseRoute()) {
+      const before = (event.oldURL || '').split('#')[1] ? `#${event.oldURL.split('#')[1]}` : '';
+      if (before === '#/home' || before === '#/upcoming') origin = before;
+      else if (!/^#\/(add-)?(note|event)/.test(before)) origin = null;
+    }
+    render();
+  });
   // When the data finishes loading (for example after a reload on this page), build the page if it is not built yet.
   const buildIfNeeded = () => {
     if (parseRoute() && builtFor !== location.hash) render();

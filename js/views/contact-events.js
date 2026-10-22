@@ -32,7 +32,15 @@ export function eventRow(event, contact, { showYear = true } = {}) {
   } else if (!showYear) second = '';
 
   const row = make('a', `ev-row ${coming ? 'up' : 'past'}`);
-  row.href = `#/event/${event.id}/${contact.id}`;
+  row.href = event.virtual ? `#/contact/${contact.id}` : `#/event/${event.id}/${contact.id}`;
+  if (event.virtual) {
+    // The birthday lives in the details: opening it starts editing the contact.
+    row.addEventListener('click', (click) => {
+      click.preventDefault();
+      const edit = document.querySelector('[data-act="edit"]');
+      if (edit) edit.click();
+    });
+  }
   const date = make('div', 'ev-date');
   date.append(make('span', 'ev-main', main));
   if (second) date.append(make('small', '', second));
@@ -44,7 +52,7 @@ export function eventRow(event, contact, { showYear = true } = {}) {
   dot.append(personIcon(together ? 2 : 1));
   dot.setAttribute('role', 'img');
   dot.setAttribute('aria-label', t(`event.kind.${together ? 'together' : 'life'}`, { name: contact.firstName || contact.nickname || displayName(contact) }));
-  title.append(dot, document.createTextNode(event.title || strings['event.untitled']));
+  title.append(dot, document.createTextNode(event.virtual ? strings['birthday.event'] : event.title || strings['event.untitled']));
   text.append(title);
 
   const others = (event.contactIds || [])
@@ -52,14 +60,15 @@ export function eventRow(event, contact, { showYear = true } = {}) {
     .map((id) => store.get('contact', id))
     .filter(Boolean)
     .map(displayName);
-  const more = [event.details ? event.details.replace(/\s+/g, ' ') : '', others.length ? t('notes.alsoOn', { names: others.join(', ') }) : ''].filter(Boolean).join(' · ');
+  const age = event.virtual && event.birthYear && next ? t('birthday.turns', { age: new Date(next).getFullYear() - event.birthYear }) : '';
+  const more = [age, event.details ? event.details.replace(/\s+/g, ' ') : '', others.length ? t('notes.alsoOn', { names: others.join(', ') }) : ''].filter(Boolean).join(' · ');
   if (more) text.append(make('span', 'ev-more', more));
   row.append(date, text);
   return row;
 }
 
 export function renderEventsSection(contact) {
-  const list = events.listFor(contact.id);
+  const list = events.listWithBirthday(contact.id);
   const section = collapsible({ key: 'events', title: strings['events.title'], count: list.length, className: 'events' });
   const add = make('a', 'btn btn-secondary btn-small', strings['events.add']);
   add.href = `#/add-event/${contact.id}`;

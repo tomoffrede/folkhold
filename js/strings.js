@@ -91,6 +91,12 @@ export const strings = {
   'data.retry': 'Try again',
   'data.errUnreadable': '{count} item(s) could not be decrypted and are not shown.',
 
+  'birthday.event': 'Birthday',
+  'birthday.turns': 'turns {age}',
+  'birthday.saved': 'Saved as {name}’s birthday under Details: {date}',
+  'birthday.updated': 'Updated {name}’s birthday under Details: {date}',
+  'birthday.same': '{name}’s birthday was already saved under Details: {date}',
+
   'upcoming.title': 'Upcoming',
   'upcoming.empty': 'Nothing coming up in this time.',
   'upcoming.range.30': '30 days',
@@ -223,8 +229,8 @@ export const strings = {
   'event.helpTitle': 'ⓘ You can write the date freely',
   'event.help1': '14.3.2024 · 14 Mar 2024 · March 2024 · 2024',
   'event.help2': 'early, mid or late March 2024',
-  'event.help3': 'summer 2023 · late 2019 · 2019–2021 · ~2015',
-  'event.help4': '14 March (repeats every year)',
+  'event.help3': 'summer 2023 · late 2019 · 2019–2021 · 14–16 March 2024 · ~2015',
+  'event.help4': 'No year = repeats every year: 14 March · mid December · summer · June–August',
   'event.err.empty': 'Enter a date. A year alone is enough.',
   'event.err.unknown': 'I could not read that date. Try for example “14 March 2024”, “mid March 2024” or “2024”.',
   'event.err.invalid': 'That date does not exist. Please check it.',

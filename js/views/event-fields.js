@@ -116,7 +116,7 @@ export function createEventFields({ title = '', details = '', date = null, repea
     const result = parseDate(dateInput.value);
     reading.textContent = result.error ? (result.error === 'empty' ? '' : strings['event.readingUnsure']) : `→ ${result.reading}`;
     reading.classList.toggle('is-unsure', Boolean(result.error));
-    repeatLabel.hidden = !(result.exact && !result.error);
+    repeatLabel.hidden = !(result.repeatable && !result.error);
     repeatBox.checked = repeating && !repeatLabel.hidden;
   }
   dateInput.addEventListener('input', () => {
@@ -155,7 +155,7 @@ export function createEventFields({ title = '', details = '', date = null, repea
         details: detailsInput.value.trim(),
         date: result.error ? null : result.date,
         dateText: dateInput.value,
-        repeat: Boolean(result.exact) && repeating,
+        repeat: Boolean(result.repeatable) && repeating,
         kind: who,
         problem: result.error || null,
         blank: !dateInput.value.trim(),

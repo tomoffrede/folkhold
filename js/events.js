@@ -3,12 +3,20 @@
 
 import * as store from './store.js';
 import * as linked from './linked.js';
-import { sortEvents } from './dates.js';
+import { sortEvents, yearlyDate } from './dates.js';
 
 const MANAGED = ['title', 'details', 'date', 'repeat', 'kind'];
 
 export function listFor(contactId) {
   return sortEvents(linked.listOf('event', contactId));
+}
+
+// The contact's events plus their birthday (from the details) as a yearly event, so it shows up with the others.
+export function listWithBirthday(contactId) {
+  const list = linked.listOf('event', contactId);
+  const b = (store.get('contact', contactId) || {}).birthday;
+  if (b && b.month && b.day) list.push({ id: 'birthday', virtual: 'birthday', date: yearlyDate(b.month, b.day), birthYear: b.year || 0, contactIds: [contactId] });
+  return sortEvents(list);
 }
 
 export function get(id) {

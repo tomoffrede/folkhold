@@ -208,16 +208,34 @@ export function parseDate(input) {
 
   let single = parseSingle(text);
   let range = null;
+  let yearless = false; // a month, season or range without a year: it comes round every year
+  if (single.error === 'needYear') {
+    const dummy = parseSingle(`${text} ${DUMMY_YEAR}`);
+    if (!dummy.error) {
+      single = dummy;
+      yearless = true;
+    }
+  }
   if (single.error && /-|\bto\b|\buntil\b/.test(text)) {
     const cut = text.split(/\s*(?:-|\bto\b|\buntil\b)\s*/);
+    // "14-16 march": the first half is only a day.
+    const lead = cut.length === 2 && /^\d{1,2}$/.test(cut[0]) && cut[1].match(/^\d{1,2}\s+(.+)$/);
+    if (lead) cut[0] = `${cut[0]} ${lead[1]}`;
     // A short year on the right half: "2019-21" and "june-august 22".
     if (cut.length === 2 && /^\d{2}$/.test(cut[1]) && /^\d{4}$/.test(cut[0])) cut[1] = String(Math.floor(+cut[0] / 100) * 100 + +cut[1]);
     const short = cut.length === 2 && cut[1].match(/^([a-z]+)\s+(\d{2})$/);
     if (short && /^[a-z]+$/.test(cut[0]) && MONTH_LOOKUP[short[1]]) cut[1] = `${short[1]} ${expandYear(+short[2])}`;
     if (cut.length === 2 && cut[0] && cut[1]) {
-      const right = parseSingle(cut[1]);
+      let right = parseSingle(cut[1]);
       let left = parseSingle(cut[0]);
-      if (left.error === 'needYear' && right.y) left = parseSingle(`${cut[0]} ${right.y}`);
+      const bare = (d) => d.error === 'needYear' || d.kind === 'yearly';
+      if (bare(left) && bare(right)) {
+        // No year on either side ("june-august", "14-16 march", "november-february"): every year.
+        left = parseSingle(`${cut[0]} ${DUMMY_YEAR}`);
+        right = parseSingle(`${cut[1]} ${DUMMY_YEAR}`);
+        if (!left.error && !right.error && left.from > right.to) right = parseSingle(`${cut[1]} ${DUMMY_YEAR + 1}`);
+        yearless = true;
+      } else if (left.error === 'needYear' && right.y) left = parseSingle(`${cut[0]} ${right.y}`);
       if (!left.error && !right.error && left.from && right.from) {
         if (left.from <= right.to) range = { left, right };
         else return { error: 'invalid' };
@@ -252,15 +270,30 @@ export function parseDate(input) {
     long = `c. ${long}`;
   }
 
-  const date = yearly ? { yearly: true, month: single.m, day: single.d } : { from, to };
+  let date;
+  if (yearly) date = { yearly: true, month: single.m, day: single.d };
+  else if (yearless) {
+    const [, fm, fd] = from.split('-').map(Number);
+    const [, tm, rawEnd] = to.split('-').map(Number);
+    const td = tm === 2 && rawEnd === 28 ? 29 : rawEnd; // the end of February, in leap years too
+    date = { yearly: true, month: fm, day: fd };
+    if (fm !== tm || fd !== td) Object.assign(date, { endMonth: tm, endDay: td });
+    short = noYear(short);
+    long = noYear(long);
+  } else date = { from, to };
   date.text = short;
   date.src = typed;
-  const exact = !yearly && from === to;
+  const exact = !yearly && !yearless && from === to;
   let reading = long;
-  if (!yearly && (vague || approx)) reading += ` (~${spanNote(from, to)})`;
-  if (yearly) reading += ' (every year)';
-  return { date, reading, exact, yearly };
+  if (!yearly && (vague || approx)) reading += ` (~${yearless ? noYear(spanNote(from, to)) : spanNote(from, to)})`;
+  if (yearly || yearless) reading += ' (every year)';
+  const days = from ? (toTs(to) - toTs(from)) / 86400000 : 0;
+  return { date, reading, exact, yearly: yearly || yearless, repeatable: !yearly && !yearless && days <= REPEAT_MAX_DAYS };
 }
+
+const DUMMY_YEAR = 2000; // a leap year, used to read dates that have no year
+const REPEAT_MAX_DAYS = 100; // longer dates ("2019", "summer 2023 to 2024") cannot repeat every year
+const noYear = (text) => text.replace(/\s*\b(19|20)\d\d\b/g, '');
 
 // ---------- using saved dates ----------
 
@@ -272,6 +305,11 @@ export function modernize(date) {
   if (precision === 'day') return { from: iso(year, month, day), to: iso(year, month, day), text: `${day} ${SHORT[month - 1]} ${year}` };
   if (precision === 'month') return { from: firstOf(year, month), to: lastOf(year, month), text: `${SHORT[month - 1]} ${year}` };
   return { from: firstOf(year, 1), to: lastOf(year, 12), text: String(year) };
+}
+
+// A date of a day and month without a year, in the saved form (used for birthdays shown as events).
+export function yearlyDate(month, day) {
+  return { yearly: true, month, day, text: `${day} ${SHORT[month - 1]}` };
 }
 
 export function formatDate(date) {
@@ -302,21 +340,48 @@ export function span(date) {
   return d && d.from ? { earliest: toTs(d.from), latest: toTs(d.to) } : null;
 }
 
+// When a date comes round every year: its first and last day as month and day, and the first year it counts from (0 = any).
+// Covers "14 March", "mid December", "June to August" and dated events that are set to repeat.
+export function yearlyInfo(event) {
+  const d = modernize(event.date);
+  if (!d) return null;
+  if (d.yearly) return { m: d.month, d: d.day, em: d.endMonth || d.month, ed: d.endDay || d.day, startYear: 0 };
+  const range = event.repeat ? span(d) : null;
+  if (!range || (range.latest - range.earliest) / 86400000 > REPEAT_MAX_DAYS) return null;
+  return { m: +d.from.slice(5, 7), d: +d.from.slice(8, 10), em: +d.to.slice(5, 7), ed: +d.to.slice(8, 10), startYear: +d.from.slice(0, 4) };
+}
+
+// The first and last day of one round of a yearly date, as timestamps. A round can run into the next year (December to February).
+function round(info, year) {
+  const day = (y, m, d) => new Date(y, m - 1, Math.min(d, daysInMonth(m, y))).getTime();
+  const wraps = info.em < info.m || (info.em === info.m && info.ed < info.d);
+  return { start: day(year, info.m, info.d), end: day(year + (wraps ? 1 : 0), info.em, info.ed) };
+}
+
 // The next day (today or later) the event happens or comes round again, or null when it is in the past for good.
+// An event that is going on right now gives today.
 export function nextOccurrence(event, today = startOfToday()) {
   const d = modernize(event.date);
   if (!d) return null;
-  const range = span(d);
-  const yearly = d.yearly || (event.repeat && range && range.earliest === range.latest);
-  if (yearly) {
-    const [month, day] = d.yearly ? [d.month, d.day] : [+d.from.slice(5, 7), +d.from.slice(8, 10)];
-    const first = Math.max(new Date(today).getFullYear(), d.yearly ? 0 : +d.from.slice(0, 4));
-    for (let year = first; year <= first + 1; year += 1) {
-      const candidate = new Date(year, month - 1, Math.min(day, daysInMonth(month, year))).getTime();
-      if (candidate >= today) return candidate;
+  const info = yearlyInfo(event);
+  if (info) {
+    const thisYear = new Date(today).getFullYear();
+    for (let year = Math.max(thisYear - 1, info.startYear); year <= thisYear + 1; year += 1) {
+      const { start, end } = round(info, year);
+      if (end >= today) return Math.max(start, today);
     }
+    return null;
   }
+  const range = span(d);
   return range && range.latest >= today ? Math.max(range.earliest, today) : null;
+}
+
+// True when a coming event is a single day (so "25 Oct" says everything) and false for a stretch of time ("Mid Dec").
+export function isSingleDay(event) {
+  const info = yearlyInfo(event);
+  if (info) return info.m === info.em && info.d === info.ed;
+  const range = span(event.date);
+  return !range || range.earliest === range.latest;
 }
 
 // Coming events first (soonest first), then past ones (most recent first).

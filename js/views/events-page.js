@@ -57,7 +57,7 @@ function render() {
   page.append(chips);
 
   const today = startOfToday();
-  const list = sortEvents(events.listFor(id).filter((event) => filter === 'all' || (filter === 'together') === (event.kind === 'together')), today);
+  const list = sortEvents(events.listWithBirthday(id).filter((event) => filter === 'all' || (filter === 'together') === (event.kind === 'together')), today);
   if (list.length === 0) page.append(make('p', 'empty', strings['events.empty']));
 
   const coming = list.filter((event) => nextOccurrence(event, today) !== null);
