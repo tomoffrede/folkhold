@@ -2,8 +2,8 @@
 // >>> EDIT THESE TWO LINES: put your full name and the email address people can reach you at. <<<
 
 export const OWNER = {
-  name: 'Tom [YOUR LAST NAME]',
-  email: '[YOUR CONTACT EMAIL]',
+  name: 'Tom Offrede',
+  email: 'folkhold@disroot.org',
 };
 
 export const REPO_URL = 'github.com/tomoffrede/folkhold';
