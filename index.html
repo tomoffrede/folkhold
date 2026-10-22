@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FAF5EC">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>Folkhold</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Folkhold">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -121,6 +130,51 @@
 <ul class="tag-manage" id="settings-tags"></ul>
 <p class="form-error" id="settings-message" role="alert" hidden></p>
 </div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.dataTitle"></h3>
+<p class="hint" data-text="settings.exportHint"></p>
+<button type="button" class="btn btn-secondary btn-small" id="export-data" data-text="settings.export"></button>
+</div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.passwordTitle"></h3>
+<button type="button" class="btn btn-secondary btn-small" id="password-open" data-text="settings.changePassword"></button>
+<form class="form" id="password-form" novalidate hidden>
+<label class="field"><span data-text="settings.currentPassword"></span><input id="password-current" type="password" autocomplete="current-password"></label>
+<label class="field"><span data-text="settings.newPassword"></span><input id="password-new" type="password" autocomplete="new-password"><small class="hint" data-text="auth.passwordHint"></small></label>
+<label class="field"><span data-text="auth.passwordRepeat"></span><input id="password-new2" type="password" autocomplete="new-password"></label>
+<p class="form-error" id="password-error" role="alert" hidden></p>
+<p class="hint" id="password-done" role="status" hidden></p>
+<div class="prompt-actions">
+<button type="submit" class="btn btn-primary btn-small" data-text="settings.savePassword"></button>
+<button type="button" class="btn btn-secondary btn-small" id="password-cancel" data-text="settings.tagCancel"></button>
+</div>
+</form>
+</div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.infoTitle"></h3>
+<nav class="legal-links settings-links" aria-label="Information">
+<a href="#/about" data-text="legal.about"></a>
+<a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
+<a href="#/privacy" data-text="legal.privacy"></a>
+<a href="#/impressum" data-text="legal.impressum"></a>
+</nav>
+</div>
+
+<div class="setting danger">
+<button type="button" class="link link-danger" id="delete-open" data-text="settings.deleteAccount"></button>
+<form class="form" id="delete-form" novalidate hidden>
+<p data-text="settings.deleteWarning"></p>
+<label class="field"><span data-text="settings.deletePassword"></span><input id="delete-password" type="password" autocomplete="current-password"></label>
+<p class="form-error" id="delete-error" role="alert" hidden></p>
+<div class="prompt-actions">
+<button type="submit" class="btn btn-danger btn-small" data-text="settings.deleteConfirm"></button>
+<button type="button" class="btn btn-secondary btn-small" id="delete-cancel" data-text="settings.tagCancel"></button>
+</div>
+</form>
+</div>
 </section>
 
 </main>
@@ -163,7 +217,35 @@
 <p class="form-error" id="signin-error" role="alert" hidden></p>
 <button type="submit" class="btn btn-primary btn-form" data-text="auth.signInButton"></button>
 </form>
+<p class="auth-switch"><button type="button" class="link" data-auth-go="reset" data-text="auth.forgotLink"></button></p>
 <p class="auth-switch"><span data-text="auth.noAccount"></span> <button type="button" class="link" data-auth-go="signup" data-text="auth.createLink"></button></p>
+</section>
+
+<section data-auth="reset" hidden>
+<h2 class="auth-title" data-text="auth.resetTitle"></h2>
+<p data-text="auth.resetText"></p>
+<form class="form" id="reset-form" novalidate>
+<label class="field">
+<span data-text="auth.username"></span>
+<input id="reset-username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+</label>
+<label class="field">
+<span data-text="auth.resetKey"></span>
+<input id="reset-key" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+</label>
+<label class="field">
+<span data-text="auth.resetNewPassword"></span>
+<input id="reset-password" type="password" autocomplete="new-password">
+<small class="hint" data-text="auth.passwordHint"></small>
+</label>
+<label class="field">
+<span data-text="auth.passwordRepeat"></span>
+<input id="reset-password2" type="password" autocomplete="new-password">
+</label>
+<p class="form-error" id="reset-error" role="alert" hidden></p>
+<button type="submit" class="btn btn-primary btn-form" data-text="auth.resetButton"></button>
+</form>
+<p class="auth-switch"><button type="button" class="link" data-auth-go="signin" data-text="auth.resetBack"></button></p>
 </section>
 
 <section data-auth="signup" hidden>
@@ -184,6 +266,7 @@
 <input id="signup-password2" type="password" autocomplete="new-password">
 </label>
 <p class="hint" data-text="auth.warning"></p>
+<p class="hint"><span data-text="auth.agree"></span> <a href="#/privacy" data-text="legal.privacy"></a> <span data-text="auth.agreeAnd"></span> <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>.</p>
 <p class="form-error" id="signup-error" role="alert" hidden></p>
 <button type="submit" class="btn btn-primary btn-form" data-text="auth.signUpButton"></button>
 </form>
@@ -224,6 +307,26 @@
 <button type="button" class="btn btn-primary btn-form no-print" id="recovery-finish" disabled data-text="auth.recoveryFinish"></button>
 </section>
 
+<nav class="legal-links no-print" aria-label="Information">
+<a href="#/about" data-text="legal.about"></a>
+<a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
+<a href="#/privacy" data-text="legal.privacy"></a>
+<a href="#/impressum" data-text="legal.impressum"></a>
+</nav>
+
+</div>
+</div>
+
+<div class="pages" id="pages-root" hidden>
+<div class="auth-box pages-box">
+<a class="link back" id="pages-back" href="#/home" data-text="pages.back"></a>
+<article id="page-content"></article>
+<nav class="legal-links no-print pages-links" aria-label="Information">
+<a href="#/about" data-text="legal.about"></a>
+<a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
+<a href="#/privacy" data-text="legal.privacy"></a>
+<a href="#/impressum" data-text="legal.impressum"></a>
+</nav>
 </div>
 </div>
 <script src="lib/supabase.js"></script>

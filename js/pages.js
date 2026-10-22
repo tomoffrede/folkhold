@@ -1,0 +1,118 @@
+// The text of the information pages. Each page is a list of blocks: ['h', heading], ['p', paragraph], ['ul', [items]].
+// {name} and {email} are replaced with the values from owner.js.
+
+export const PAGES = {
+  about: {
+    title: 'About Folkhold',
+    blocks: [
+      ['h', 'What Folkhold is'],
+      ['p', 'Folkhold is a small, free app for remembering the people in your life. For each person you can keep basic details, notes, events (a trip, the day you met, a birthday) and your own tags such as “work friend”. You can search everything and see what is coming up soon.'],
+      ['p', 'It is made for the moment when you meet someone and want to remember them: adding a person takes a few seconds, and everything else can be filled in later. Nothing is required except a name or a nickname.'],
+      ['h', 'Who made it'],
+      ['p', 'Folkhold is a personal project by {name}. It is free, has no ads, no tracking and no company behind it.'],
+      ['h', 'How it was made'],
+      ['p', 'Folkhold was “vibe coded”: {name} is not a professional programmer. The ideas, the decisions about how it should look and work, and all the testing on a real phone and computer are {name}’s. The code itself was written together with an AI assistant, Claude, made by Anthropic, step by step and in plain language.'],
+      ['p', 'Because of this, Folkhold is a hobby project and comes without guarantees. Please keep your recovery key safe, and download your data from time to time (Settings → Download my data).'],
+      ['h', 'Under the hood'],
+      ['p', 'The app is plain HTML, CSS and JavaScript with no frameworks. The pages are served by GitHub Pages. Your data is stored in a Supabase database in the EU, always encrypted on your own device first (see “Data privacy explained”). The code can be read at {repo}.'],
+    ],
+  },
+
+  'data-privacy': {
+    title: 'Data privacy explained',
+    blocks: [
+      ['p', 'This page explains in everyday language how Folkhold keeps your data private. The formal, legal version is the Privacy policy.'],
+      ['h', 'The short version'],
+      ['p', 'Everything you save about people is scrambled (encrypted) on your own phone or computer before it is sent anywhere. The server only ever stores scrambled data. Nobody who runs the server, including the person who made Folkhold, can read it.'],
+      ['h', 'What is scrambled'],
+      ['p', 'Names, nicknames, phone numbers, emails, addresses, birthdays, notes, events, tags and your settings: everything you type about people.'],
+      ['h', 'What the server can see'],
+      ['ul', [
+        'Your username.',
+        'When your account was made and when your data last changed.',
+        'How many items you have and roughly how big they are (but not what is in them).',
+        'Technical connection details that every website sees, such as your IP address.',
+      ]],
+      ['h', 'How the scrambling works'],
+      ['p', 'When you create an account, your browser makes a long random master key. That key scrambles all your data. The master key is stored on the server only in locked form: locked once with a key made from your password, and once with the recovery key you saw at sign-up.'],
+      ['p', 'Your password itself is never sent. The app sends only a separate value made from it by a deliberately slow calculation, which makes guessing passwords expensive for an attacker. Folkhold uses only the encryption built into your browser (AES-256 and PBKDF2), with no outside code.'],
+      ['h', 'Why there is a recovery key'],
+      ['p', 'Because nobody else can unlock your data, nobody else can reset your password for you either. The recovery key is your way back in if you forget your password. If you lose both the password and the recovery key, your data cannot be recovered by anyone. Keep the key somewhere safe, away from your phone.'],
+      ['h', 'What is kept on your device'],
+      ['ul', [
+        'A key that keeps you signed in, stored in a form web pages cannot read out.',
+        'Unsaved drafts of notes and events, encrypted, so a reload does not lose your typing.',
+        'Small preferences such as which sections are open.',
+      ]],
+      ['p', 'Signing out removes the key and the drafts. Folkhold uses no cookies, no analytics, no advertising and no trackers, and it loads nothing from other websites.'],
+      ['h', 'Kept apart from other users'],
+      ['p', 'The database has access rules that let every account read and change only its own rows. And even if those rules failed, other people would only see scrambled data.'],
+      ['h', 'Honest limits'],
+      ['ul', [
+        'Anyone who knows your password, or who gets hold of your unlocked phone or computer, can read your data. Use a long, unique password and a screen lock.',
+        'The app code arrives from the website every time you open it. If someone took over the website, they could in theory change the code to read your data. That is true for every web app. It is why Folkhold’s code is small and public.',
+        'The server knows that you have an account and roughly how much you store, just not what.',
+        'The “email it to myself” option for the recovery key goes through your own mail app, so your email provider will see the key. Use it only with a mailbox you trust.',
+      ]],
+      ['h', 'Your control'],
+      ['p', 'You can download all your data at any time as a file, and you can delete your account in Settings. Deleting removes your login and all your stored data from the server for good.'],
+      ['h', 'People you write about'],
+      ['p', 'Folkhold is meant as a private notebook for personal use. Please use it that way, and keep in mind that the people you write about are real.'],
+    ],
+  },
+
+  privacy: {
+    title: 'Privacy policy',
+    blocks: [
+      ['p', 'Last updated: {updated}. This is a private hobby project. The text is written in good faith and has not been reviewed by a lawyer.'],
+      ['h', '1. Who is responsible'],
+      ['p', 'The controller under Art. 4(7) GDPR is {name}. Contact: {email}. The postal address is available on request by email.'],
+      ['h', '2. What this policy covers'],
+      ['p', 'This policy covers the Folkhold website and app. Folkhold lets you sign in with a username and password and store information about people you know. For a plain-language explanation of the technical protection, see “Data privacy explained”.'],
+      ['h', '3. Data we process, why, and on what basis'],
+      ['ul', [
+        'Visiting the website: the web host (GitHub Pages) processes your IP address and request details to deliver the pages and keep the service secure. Basis: legitimate interest in providing and securing the website (Art. 6(1)(f) GDPR).',
+        'Your account: your username, a value derived from your password (not the password itself) and account timestamps. Basis: performing the service you asked for (Art. 6(1)(b) GDPR).',
+        'Your content: contacts, notes, events, tags and settings. They are encrypted on your device before upload, so the controller cannot read them. The encrypted data and its size and change times are stored for you. Basis: Art. 6(1)(b) GDPR.',
+        'Security logs: the database provider logs connections (for example IP address and time) for security and operation. Basis: legitimate interest (Art. 6(1)(f) GDPR).',
+      ]],
+      ['h', '4. Who receives data'],
+      ['ul', [
+        'Supabase (database and login), with the project hosted in a data center region in the EU. A data processing agreement applies.',
+        'GitHub, Inc. (website hosting via GitHub Pages) in the USA. Transfers rely on the safeguards described in GitHub’s own privacy statement, such as standard contractual clauses or the EU–US Data Privacy Framework.',
+      ]],
+      ['p', 'Your data is not sold or used for advertising, and nobody else receives it.'],
+      ['h', '5. Storage on your device'],
+      ['p', 'Folkhold stores a sign-in key, encrypted drafts and small preferences in your browser’s local storage. This is technically necessary for the service you request, so no consent banner is needed (§ 25(2) TDDDG). There are no tracking cookies and no analytics.'],
+      ['h', '6. How long data is kept'],
+      ['p', 'Account data and content are kept until you delete your account, which removes them from the server. Security logs are kept by the providers for their usual short periods.'],
+      ['h', '7. Your rights'],
+      ['p', 'You have the right to access, rectification, erasure, restriction of processing, data portability and objection (Art. 15–21 GDPR). In the app you can download all your data (Settings → Download my data), edit everything, and delete your account (Settings → Delete my account). You may also contact {email}. You have the right to complain to a data protection supervisory authority, for example the one of your German federal state or your country of residence.'],
+      ['h', '8. Information about other people'],
+      ['p', 'If you store information about other people for purely personal purposes, the GDPR does not apply to that personal use (Art. 2(2)(c)). If you use Folkhold for professional or commercial purposes, you are responsible for that data yourself.'],
+      ['h', '9. Other points'],
+      ['ul', [
+        'You are not required to provide any data, but the service cannot work without an account.',
+        'There is no automated decision-making or profiling.',
+        'Folkhold is not intended for children under 16.',
+        'This policy may be updated; the date above shows the latest version.',
+      ]],
+    ],
+  },
+
+  impressum: {
+    title: 'Impressum',
+    blocks: [
+      ['h', 'Legal notice (Angaben gemäß § 5 DDG)'],
+      ['p', '{name}'],
+      ['p', 'Postal address (Anschrift): provided on request by email.'],
+      ['p', 'Email (E-Mail): {email}'],
+      ['h', 'About this website'],
+      ['p', 'Folkhold is a private, non-commercial project. It is free and has no advertising.'],
+      ['h', 'Responsible for the content (Verantwortlich)'],
+      ['p', '{name}, contact as above.'],
+      ['h', 'Liability'],
+      ['p', 'Folkhold is provided as it is, without guarantees. Despite careful work, no liability is accepted for data loss or interruptions. Please download your data regularly and keep your recovery key safe.'],
+    ],
+  },
+};

@@ -102,6 +102,18 @@ function bindForms() {
     });
   });
 
+  $('reset-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector('[type="submit"]');
+    runWithButton(button, 'reset-error', async () => {
+      const password = $('reset-password').value;
+      if (password !== $('reset-password2').value) throw new Error(strings['auth.errMismatch']);
+      const state = await auth.resetPassword($('reset-username').value, $('reset-key').value, password);
+      ['reset-key', 'reset-password', 'reset-password2'].forEach((id) => ($(id).value = ''));
+      route(state);
+    });
+  });
+
   $('locked-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector('[type="submit"]');

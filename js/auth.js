@@ -133,10 +133,79 @@ export async function confirmSetup() {
     kdf_iterations: vault.PBKDF2_ITERATIONS,
     wrapped_key_password: keys.wrappedKeyPassword,
     wrapped_key_recovery: keys.wrappedKeyRecovery,
+    recovery_check: keys.recoveryCheck,
   });
   if (error) throw new Error(strings['auth.errSetup']);
   await saveKey(userId, masterKey).catch(() => {});
   pending = null;
+}
+
+// Changes the password while signed in. The data is not touched: only the locked copy of the master key is replaced.
+export async function changePassword(currentPassword, newPassword) {
+  const problem = validatePassword(newPassword);
+  if (problem) throw new Error(problem);
+  if (!username) throw new Error(strings['auth.errNetwork']);
+
+  const current = await vault.deriveFromPassword(username, currentPassword);
+  const { data: row, error } = await supabase.from('user_keys').select('wrapped_key_password').maybeSingle();
+  if (error || !row) throw new Error(strings['auth.errNetwork']);
+  let master;
+  try {
+    master = await vault.unlockWithPassword(current, row.wrapped_key_password);
+  } catch {
+    throw new Error(strings['settings.errCurrentWrong']);
+  }
+  const next = await vault.deriveFromPassword(username, newPassword);
+  const wrapped = await vault.rewrapForNewPassword(next, master);
+  const { error: saveError } = await supabase.rpc('change_password', { new_login_secret: next.loginSecret, new_wrapped_key: wrapped });
+  if (saveError) throw new Error(strings['auth.errSetup']);
+}
+
+// Forgotten password: proves the recovery key to the server, sets a new password, and signs in.
+export async function resetPassword(rawUsername, recoveryKeyText, newPassword) {
+  const problem = validateUsername(rawUsername) || validatePassword(newPassword);
+  if (problem) throw new Error(problem);
+  const name = vault.normalizeUsername(rawUsername);
+  const email = usernameToEmail(name);
+
+  let verifier;
+  try {
+    verifier = await vault.recoveryVerifier(recoveryKeyText);
+  } catch {
+    throw new Error(strings['auth.errResetWrong']);
+  }
+  const { data: blob, error } = await supabase.rpc('get_recovery_blob', { p_email: email, p_verifier: verifier });
+  if (error) throw new Error(strings['auth.errNetwork']);
+  if (!blob) throw new Error(strings['auth.errResetWrong']);
+
+  let master;
+  try {
+    master = await vault.unlockWithRecoveryKey(recoveryKeyText, blob);
+  } catch {
+    throw new Error(strings['auth.errResetWrong']);
+  }
+  const next = await vault.deriveFromPassword(name, newPassword);
+  const wrapped = await vault.rewrapForNewPassword(next, master);
+  const { data: ok, error: saveError } = await supabase.rpc('reset_password', {
+    p_email: email,
+    p_verifier: verifier,
+    new_login_secret: next.loginSecret,
+    new_wrapped_key: wrapped,
+  });
+  if (saveError) throw new Error(strings['auth.errNetwork']);
+  if (!ok) throw new Error(strings['auth.errResetWrong']);
+  return signIn(name, newPassword);
+}
+
+// Deletes the account and everything stored for it on the server, after checking the password once more.
+export async function deleteAccount(password) {
+  if (!username) throw new Error(strings['auth.errNetwork']);
+  const derived = await vault.deriveFromPassword(username, password);
+  const { error } = await supabase.auth.signInWithPassword({ email: usernameToEmail(username), password: derived.loginSecret });
+  if (error) throw friendly(error);
+  const { error: deleteError } = await supabase.rpc('delete_my_account');
+  if (deleteError) throw new Error(strings['settings.errDelete']);
+  await signOut();
 }
 
 export async function signOut() {

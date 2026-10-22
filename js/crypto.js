@@ -112,6 +112,31 @@ async function open(key, packageText, contextText) {
   return new Uint8Array(plain);
 }
 
+// The text of a typed recovery key turned back into its bytes. Letters that look alike are forgiven (O is 0, I and L are 1).
+function recoveryBytesFrom(recoveryKeyText) {
+  const clean = String(recoveryKeyText)
+    .toUpperCase()
+    .replace(/[\s-]/g, '')
+    .replace(/O/g, '0')
+    .replace(/[IL]/g, '1');
+  if (clean.length !== RECOVERY_KEY_LENGTH) {
+    throw new Error('A recovery key has 52 characters (13 groups of 4).');
+  }
+  return base32ToBytes(clean);
+}
+
+// Proof that someone holds the recovery key, without sending the key. "verifier" goes to the server when resetting a password;
+// "check" (its fingerprint) is what the server stores, so a leaked database cannot be used to reset anything.
+async function proofFromBytes(recoveryBytes) {
+  const verifier = toBase64Url(await hkdfBytes(recoveryBytes, 'folkhold-v1 recovery verifier'));
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(verifier)));
+  return { verifier, check: [...hash].map((b) => b.toString(16).padStart(2, '0')).join('') };
+}
+
+export async function recoveryVerifier(recoveryKeyText) {
+  return (await proofFromBytes(recoveryBytesFrom(recoveryKeyText))).verifier;
+}
+
 // ---------- accounts ----------
 
 // Usernames are compared in a standard form: same letters, no capitals, no spaces around.
@@ -163,6 +188,7 @@ export async function createAccountKeys(derived) {
   return {
     masterKey,
     recoveryKey,
+    recoveryCheck: (await proofFromBytes(recoveryBytes)).check,
     wrappedKeyPassword: await seal(derived.kek, masterBytes, 'folkhold-v1 master-key'),
     wrappedKeyRecovery: await seal(recoveryWrapKey, masterBytes, 'folkhold-v1 master-key'),
   };
@@ -180,16 +206,8 @@ export async function unlockWithPassword(derived, wrappedKeyPassword) {
 
 // When the password is forgotten: unlocks the master key with the recovery key (as typed by the user).
 export async function unlockWithRecoveryKey(recoveryKeyText, wrappedKeyRecovery) {
-  const clean = String(recoveryKeyText)
-    .toUpperCase()
-    .replace(/[\s-]/g, '')
-    .replace(/O/g, '0')
-    .replace(/[IL]/g, '1');
-  if (clean.length !== RECOVERY_KEY_LENGTH) {
-    throw new Error('A recovery key has 52 characters (13 groups of 4).');
-  }
+  const recoveryBytes = recoveryBytesFrom(recoveryKeyText);
   try {
-    const recoveryBytes = base32ToBytes(clean);
     const wrapKey = await importAesKey(await hkdfBytes(recoveryBytes, 'folkhold-v1 recovery wrap'));
     const bytes = await open(wrapKey, wrappedKeyRecovery, 'folkhold-v1 master-key');
     return await importAesKey(bytes, true);

@@ -3,6 +3,9 @@
 import { strings, t } from '../strings.js';
 import * as settings from '../settings.js';
 import * as tags from '../tags.js';
+import * as auth from '../auth.js';
+import { downloadExport } from '../export.js';
+import { clearAllDrafts } from '../drafts.js';
 
 const $ = (id) => document.getElementById(id);
 const radios = () => document.querySelectorAll('input[name="contact-sort"]');
@@ -164,7 +167,86 @@ function renderTags() {
   $('settings-tags-empty').hidden = !loaded || all.length > 0;
 }
 
+// ---------- password, export, delete ----------
+
+function bindAccount() {
+  $('export-data').addEventListener('click', downloadExport);
+
+  const passwordForm = $('password-form');
+  const closePassword = () => {
+    passwordForm.hidden = true;
+    $('password-open').hidden = false;
+    ['password-current', 'password-new', 'password-new2'].forEach((id) => ($(id).value = ''));
+    $('password-error').hidden = true;
+  };
+  $('password-open').addEventListener('click', () => {
+    passwordForm.hidden = false;
+    $('password-open').hidden = true;
+    $('password-done').hidden = true;
+    $('password-current').focus();
+  });
+  $('password-cancel').addEventListener('click', closePassword);
+  passwordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = passwordForm.querySelector('[type="submit"]');
+    const error = $('password-error');
+    error.hidden = true;
+    button.disabled = true;
+    try {
+      if ($('password-new').value !== $('password-new2').value) throw new Error(strings['auth.errMismatch']);
+      await auth.changePassword($('password-current').value, $('password-new').value);
+      closePassword();
+      $('password-done').textContent = strings['settings.passwordChanged'];
+      $('password-done').hidden = false;
+    } catch (problem) {
+      error.textContent = problem.message;
+      error.hidden = false;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  const deleteForm = $('delete-form');
+  const closeDelete = () => {
+    deleteForm.hidden = true;
+    $('delete-open').hidden = false;
+    $('delete-password').value = '';
+    $('delete-error').hidden = true;
+  };
+  $('delete-open').addEventListener('click', () => {
+    deleteForm.hidden = false;
+    $('delete-open').hidden = true;
+    $('delete-password').focus();
+  });
+  $('delete-cancel').addEventListener('click', closeDelete);
+  deleteForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = deleteForm.querySelector('[type="submit"]');
+    const error = $('delete-error');
+    error.hidden = true;
+    button.disabled = true;
+    try {
+      await auth.deleteAccount($('delete-password').value);
+      clearAllDrafts();
+      try {
+        Object.keys(localStorage)
+          .filter((name) => name.startsWith('folkhold'))
+          .forEach((name) => localStorage.removeItem(name));
+      } catch {
+        // nothing more to clear
+      }
+      location.hash = '';
+      location.reload();
+    } catch (problem) {
+      error.textContent = problem.message;
+      error.hidden = false;
+      button.disabled = false;
+    }
+  });
+}
+
 export function initSettings() {
+  bindAccount();
   document.addEventListener('folkhold:data', show);
   document.addEventListener('folkhold:saved', () => {
     if (loaded && !renaming) renderTags();

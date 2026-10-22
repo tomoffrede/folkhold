@@ -8,6 +8,7 @@ import { initSettings } from './views/settings.js';
 import { initNoteForm } from './views/item-form.js';
 import { initEventsPage } from './views/events-page.js';
 import { initUpcoming } from './views/upcoming.js';
+import { initPages } from './views/pages.js';
 
 const SCREENS = ['home', 'contacts', 'contact', 'events', 'note', 'upcoming', 'settings'];
 
@@ -71,4 +72,5 @@ initSettings();
 initNoteForm();
 initEventsPage();
 initUpcoming();
+initPages();
 initAuth();
