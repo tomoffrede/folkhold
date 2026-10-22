@@ -3,6 +3,7 @@
 
 import { strings } from '../strings.js';
 import { createEditor } from './rich-editor.js';
+import * as settings from '../settings.js';
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -35,6 +36,7 @@ export function createNoteFields({ title = '', body = [], priority = 0, onChange
   // Priority: tap a level to choose it, tap it again to clear it.
   let current = priority || 0;
   const row = make('div', 'prio-row');
+  row.hidden = !settings.get('showPriority') && !current; // switched off in Settings (a note that has one still shows it)
   row.append(make('span', 'prio-label', strings['note.priority']));
   const buttons = [1, 2, 3].map((level) => {
     const button = make('button', `chip prio-chip prio-${level}`, strings[`note.priority${level}`]);
@@ -61,6 +63,7 @@ export function createNoteFields({ title = '', body = [], priority = 0, onChange
       titleInput.value = values.title || '';
       editor.setBody(values.body || []);
       current = values.priority || 0;
+      if (current) row.hidden = false;
       refresh();
     },
     focus: () => editor.focus(),

@@ -271,10 +271,18 @@ export function initContacts() {
     });
   });
   const input = $('contacts-search');
-  input.addEventListener('input', () => {
+  const clear = $('search-clear');
+  const update = () => {
     query = input.value.trim();
+    clear.hidden = input.value === '';
     renderFilter();
     renderList();
+  };
+  input.addEventListener('input', update);
+  clear.addEventListener('click', () => {
+    input.value = '';
+    update();
+    input.focus();
   });
   document.addEventListener('folkhold:ready', load);
   document.addEventListener('folkhold:saved', () => {

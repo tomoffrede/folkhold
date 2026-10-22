@@ -1,45 +1,178 @@
-// The Settings screen: the choices you can change. (Sign out is handled in views/auth.js.)
+// The Settings screen: the choices you can change, and your tags. (Sign out is handled in views/auth.js.)
 
+import { strings, t } from '../strings.js';
 import * as settings from '../settings.js';
+import * as tags from '../tags.js';
 
+const $ = (id) => document.getElementById(id);
 const radios = () => document.querySelectorAll('input[name="contact-sort"]');
+const fieldBoxes = () => document.querySelectorAll('[data-hide-field]');
 
-// Shows the saved choice. The choices stay switched off until the data has loaded.
+let loaded = false;
+
+function make(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function showMessage(text) {
+  const message = $('settings-message');
+  message.textContent = text || '';
+  message.hidden = !text;
+}
+
+// Shows the saved choices. The choices stay switched off until the data has loaded.
 function show() {
+  loaded = true;
   const value = settings.get('contactSort');
   radios().forEach((radio) => {
     radio.checked = radio.value === value;
     radio.disabled = false;
   });
-  const lastMet = document.getElementById('setting-lastmet');
+  const lastMet = $('setting-lastmet');
   lastMet.checked = settings.get('showLastMet');
   lastMet.disabled = false;
+  const priority = $('setting-priority');
+  priority.checked = settings.get('showPriority');
+  priority.disabled = false;
+  const hidden = settings.get('hiddenFields') || [];
+  fieldBoxes().forEach((box) => {
+    box.checked = !hidden.includes(box.dataset.hideField);
+    box.disabled = false;
+  });
+  renderTags();
+}
+
+// Saves one setting; on a problem, shows it and goes back to what is really saved.
+async function save(key, value) {
+  showMessage('');
+  try {
+    await settings.set(key, value);
+  } catch (error) {
+    showMessage(error.message);
+    show();
+  }
+}
+
+// ---------- tags ----------
+
+let renaming = null; // id of the tag being renamed
+let deleting = null; // id of the tag being deleted (waiting for "Yes")
+
+async function run(task) {
+  showMessage('');
+  try {
+    await task();
+  } catch (error) {
+    showMessage(error.message);
+  }
+}
+
+function tagRow(tag) {
+  const row = make('li', 'tag-manage-row');
+  const total = tags.count(tag.id);
+
+  if (renaming === tag.id) {
+    const input = make('input', 'tag-rename');
+    input.type = 'text';
+    input.value = tag.name;
+    input.setAttribute('aria-label', strings['settings.tagRename']);
+    const ok = make('button', 'btn btn-primary btn-small', strings['settings.tagSave']);
+    const cancel = make('button', 'btn btn-secondary btn-small', strings['settings.tagCancel']);
+    ok.type = 'button';
+    cancel.type = 'button';
+    const done = () =>
+      run(async () => {
+        if (tags.clean(input.value) !== tag.name) await tags.rename(tag.id, input.value);
+        renaming = null;
+        renderTags();
+      });
+    ok.addEventListener('click', done);
+    cancel.addEventListener('click', () => {
+      renaming = null;
+      showMessage('');
+      renderTags();
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') done();
+      else if (event.key === 'Escape') cancel.click();
+    });
+    row.append(input, ok, cancel);
+    setTimeout(() => input.focus(), 0);
+    return row;
+  }
+
+  const name = make('span', 'tag-manage-name');
+  name.append(make('b', '', tag.name), make('small', '', t(total === 1 ? 'settings.tagOne' : 'settings.tagMany', { n: total })));
+  row.append(name);
+
+  if (deleting === tag.id) {
+    const sure = make('div', 'confirm-row');
+    sure.append(make('span', 'confirm-text', total ? t('settings.tagDeleteSure', { n: total }) : strings['settings.tagDeleteSureNone']));
+    const yes = make('button', 'btn btn-danger btn-small', strings['settings.tagDeleteYes']);
+    const keep = make('button', 'btn btn-secondary btn-small', strings['note.keep']);
+    yes.type = 'button';
+    keep.type = 'button';
+    yes.addEventListener('click', () =>
+      run(async () => {
+        yes.disabled = true;
+        await tags.remove(tag.id);
+        deleting = null;
+        renderTags();
+      }).finally(() => {
+        yes.disabled = false;
+      }),
+    );
+    keep.addEventListener('click', () => {
+      deleting = null;
+      renderTags();
+    });
+    sure.append(yes, keep);
+    row.append(sure);
+    return row;
+  }
+
+  const actions = make('div', 'tag-manage-actions');
+  const rename = make('button', 'btn btn-secondary btn-small', strings['settings.tagRename']);
+  const del = make('button', 'link link-danger', strings['settings.tagDelete']);
+  rename.type = 'button';
+  del.type = 'button';
+  rename.addEventListener('click', () => {
+    renaming = tag.id;
+    deleting = null;
+    showMessage('');
+    renderTags();
+  });
+  del.addEventListener('click', () => {
+    deleting = tag.id;
+    renaming = null;
+    showMessage('');
+    renderTags();
+  });
+  actions.append(rename, del);
+  row.append(actions);
+  return row;
+}
+
+function renderTags() {
+  const list = $('settings-tags');
+  if (!list) return;
+  const all = loaded ? tags.list() : [];
+  list.replaceChildren(...all.map(tagRow));
+  $('settings-tags-empty').hidden = !loaded || all.length > 0;
 }
 
 export function initSettings() {
   document.addEventListener('folkhold:data', show);
-  document.getElementById('setting-lastmet').addEventListener('change', async (event) => {
-    const message = document.getElementById('settings-message');
-    message.hidden = true;
-    try {
-      await settings.set('showLastMet', event.target.checked);
-    } catch (error) {
-      message.textContent = error.message;
-      message.hidden = false;
-      show();
-    }
+  document.addEventListener('folkhold:saved', () => {
+    if (loaded && !renaming) renderTags();
   });
-  radios().forEach((radio) => {
-    radio.addEventListener('change', async () => {
-      const message = document.getElementById('settings-message');
-      message.hidden = true;
-      try {
-        await settings.set('contactSort', radio.value);
-      } catch (error) {
-        message.textContent = error.message;
-        message.hidden = false;
-        show(); // go back to the choice that is really saved
-      }
-    });
-  });
+  $('setting-lastmet').addEventListener('change', (event) => save('showLastMet', event.target.checked));
+  $('setting-priority').addEventListener('change', (event) => save('showPriority', event.target.checked));
+  fieldBoxes().forEach((box) =>
+    box.addEventListener('change', () => save('hiddenFields', [...fieldBoxes()].filter((b) => !b.checked).map((b) => b.dataset.hideField))),
+  );
+  radios().forEach((radio) => radio.addEventListener('change', () => save('contactSort', radio.value)));
 }

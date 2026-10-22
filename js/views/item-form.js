@@ -63,7 +63,7 @@ function parseRoute() {
   return null;
 }
 
-// The page an event or note was opened from, when that was Home or Upcoming: "Back" and the end of saving go there.
+// The page an event or note was opened from, when that was Home, Upcoming or the Contacts list (search results): "Back" and the end of saving go there.
 let origin = null;
 
 function backHref(route) {
@@ -432,7 +432,7 @@ export function initNoteForm() {
     // Remember Home or Upcoming as the page to go back to, when an event is opened from there.
     if (parseRoute()) {
       const before = (event.oldURL || '').split('#')[1] ? `#${event.oldURL.split('#')[1]}` : '';
-      if (before === '#/home' || before === '#/upcoming') origin = before;
+      if (before === '#/home' || before === '#/upcoming' || before === '#/contacts') origin = before;
       else if (!/^#\/(add-)?(note|event)/.test(before)) origin = null;
     }
     render();

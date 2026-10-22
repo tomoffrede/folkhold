@@ -48,7 +48,10 @@
 <button type="button" class="btn btn-secondary btn-small" data-action="add-contact" data-text="contacts.add"></button>
 </div>
 <p class="empty" id="contacts-status" hidden></p>
+<div class="search-wrap">
 <input type="search" class="search-box" id="contacts-search" data-placeholder="search.placeholder" autocomplete="off" spellcheck="false">
+<button type="button" class="search-clear" id="search-clear" data-label="search.clear" hidden>×</button>
+</div>
 <div class="tag-filter" id="contacts-filter" hidden></div>
 <ul class="people" id="contacts-list"></ul>
 <div id="search-results" hidden></div>
@@ -94,6 +97,28 @@
 <div class="setting">
 <h3 class="group-title" data-text="settings.contactPageTitle"></h3>
 <label class="check"><input type="checkbox" id="setting-lastmet" checked disabled><span data-text="settings.showLastMet"></span></label>
+</div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.fieldsTitle"></h3>
+<p class="hint" data-text="settings.fieldsHint"></p>
+<label class="check"><input type="checkbox" data-hide-field="emails" checked disabled><span data-text="settings.field.emails"></span></label>
+<label class="check"><input type="checkbox" data-hide-field="phones" checked disabled><span data-text="settings.field.phones"></span></label>
+<label class="check"><input type="checkbox" data-hide-field="addresses" checked disabled><span data-text="settings.field.addresses"></span></label>
+<label class="check"><input type="checkbox" data-hide-field="handles" checked disabled><span data-text="settings.field.handles"></span></label>
+<label class="check"><input type="checkbox" data-hide-field="birthday" checked disabled><span data-text="settings.field.birthday"></span></label>
+<label class="check"><input type="checkbox" data-hide-field="met" checked disabled><span data-text="settings.field.met"></span></label>
+</div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.notesTitle"></h3>
+<label class="check"><input type="checkbox" id="setting-priority" checked disabled><span data-text="settings.showPriority"></span></label>
+</div>
+
+<div class="setting">
+<h3 class="group-title" data-text="settings.tagsTitle"></h3>
+<p class="hint" id="settings-tags-empty" data-text="settings.tagsEmpty" hidden></p>
+<ul class="tag-manage" id="settings-tags"></ul>
 <p class="form-error" id="settings-message" role="alert" hidden></p>
 </div>
 </section>

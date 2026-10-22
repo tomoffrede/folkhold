@@ -25,6 +25,7 @@ function fillStrings() {
 
 // Put the text from strings.js into placeholders (data-placeholder).
 function fillPlaceholders() {
+  document.querySelectorAll('[data-label]').forEach((el) => el.setAttribute('aria-label', strings[el.dataset.label] || ''));
   document.querySelectorAll('[data-placeholder]').forEach((el) => {
     el.placeholder = strings[el.dataset.placeholder] || '';
     el.setAttribute('aria-label', el.placeholder);

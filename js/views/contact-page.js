@@ -416,22 +416,26 @@ function renderEditor(page, contact) {
   names.append(nameRow, nameField('nickname', 'addContact.nickname', contact), tagField);
 
   const chips = make('div', 'chips');
+  const hiddenFields = settings.get('hiddenFields') || []; // detail buttons switched off in Settings
   let noteRow = null;
   GROUPS.forEach((group) => {
     const chip = make('button', 'chip', strings[group.chip]);
     chip.type = 'button';
     chip.dataset.add = group.key;
+    if (hiddenFields.includes(group.key)) chip.dataset.off = '1';
     chips.append(chip);
   });
   const birthdayChip = make('button', 'chip', strings['contact.chipBirthday']);
   birthdayChip.type = 'button';
   birthdayChip.dataset.add = 'birthday';
   birthdayChip.hidden = Boolean(contact.birthday);
+  if (hiddenFields.includes('birthday')) birthdayChip.dataset.off = '1';
   chips.append(birthdayChip);
   const metChip = make('button', 'chip', strings['contact.chipMet']);
   metChip.type = 'button';
   metChip.dataset.add = 'met';
   metChip.hidden = Boolean(contact.met);
+  if (hiddenFields.includes('met')) metChip.dataset.off = '1';
   chips.append(metChip);
   if (isNew) {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);

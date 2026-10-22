@@ -6,6 +6,8 @@ import * as store from './store.js';
 const DEFAULTS = {
   contactSort: 'first', // 'first' = by first name, 'last' = by last name
   showLastMet: true, // show "Last met: ..." on a contact's page
+  hiddenFields: [], // detail buttons not offered: 'emails', 'phones', 'addresses', 'handles', 'birthday', 'met'
+  showPriority: true, // show the priority choice when writing a note
 };
 
 let queue = Promise.resolve(); // saves run one after the other, so the record is never created twice
