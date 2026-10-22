@@ -23,6 +23,14 @@ function fillStrings() {
   });
 }
 
+// Put the text from strings.js into placeholders (data-placeholder).
+function fillPlaceholders() {
+  document.querySelectorAll('[data-placeholder]').forEach((el) => {
+    el.placeholder = strings[el.dataset.placeholder] || '';
+    el.setAttribute('aria-label', el.placeholder);
+  });
+}
+
 // Which screen the address asks for ("#/contacts" gives "contacts"). Unknown or empty gives "home".
 function currentScreen() {
   const name = location.hash.replace('#/', '').split('/')[0];
@@ -54,6 +62,7 @@ function showScreen() {
 
 window.addEventListener('hashchange', showScreen);
 fillStrings();
+fillPlaceholders();
 showScreen();
 initContacts();
 initContact();

@@ -4,6 +4,8 @@ import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as settings from '../settings.js';
 import * as tags from '../tags.js';
+import { search } from '../search.js';
+import { formatDate } from '../dates.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
@@ -12,6 +14,7 @@ let loaded = false;
 const selected = new Set(); // tags the list is filtered by
 let matchAll = true; // true: a contact needs all the selected tags; false: any one of them
 let filterOpen = false;
+let query = ''; // what is typed in the search box
 
 // "First Last", or the nickname when there is no name.
 export function displayName(contact) {
@@ -61,6 +64,10 @@ function sortName(contact) {
 
 function renderFilter() {
   const box = $('contacts-filter');
+  if (query) {
+    box.hidden = true;
+    return;
+  }
   const used = tags.inUse();
   [...selected].forEach((id) => {
     if (!used.some((tag) => tag.id === id)) selected.delete(id);
@@ -148,7 +155,70 @@ export function filterByTag(id) {
   renderList();
 }
 
+function resultLink(href, title, small, names) {
+  const link = document.createElement('a');
+  link.className = 'result';
+  link.href = href;
+  const top = document.createElement('b');
+  top.textContent = title;
+  link.append(top);
+  if (small) {
+    const line = document.createElement('span');
+    line.className = 'result-text';
+    line.textContent = small;
+    link.append(line);
+  }
+  const who = document.createElement('small');
+  who.textContent = names;
+  link.append(who);
+  return link;
+}
+
+// What the typed search found: contacts, notes and events, each in its own group.
+function renderSearch() {
+  const box = $('search-results');
+  const found = search(query);
+  box.replaceChildren();
+  $('contacts-list').hidden = true;
+  $('contacts-empty').hidden = true;
+  $('contacts-nomatch').hidden = true;
+  box.hidden = false;
+  const namesOf = (item) => (item.contactIds || []).map((id) => store.get('contact', id)).filter(Boolean).map(displayName);
+  const group = (key, count, nodes) => {
+    if (!count) return;
+    const heading = document.createElement('h3');
+    heading.className = 'ev-group';
+    heading.textContent = t(key, { n: count });
+    box.append(heading, ...nodes);
+  };
+  const contacts = found.contacts.sort((a, b) => collator.compare(sortName(a), sortName(b)));
+  group('search.contacts', contacts.length, [Object.assign(document.createElement('ul'), { className: 'people' })]);
+  box.querySelector('ul.people')?.append(...contacts.map(personRow));
+  const noteNodes = found.notes.map(({ item, snippet }) => {
+    const first = (item.contactIds || [])[0];
+    return resultLink(`#/note/${item.id}/${first}`, item.title || strings['search.untitledNote'], snippet, namesOf(item).join(', '));
+  });
+  group('search.notes', noteNodes.length, noteNodes);
+  const eventNodes = found.events.map(({ item, snippet }) => {
+    const first = (item.contactIds || [])[0];
+    return resultLink(`#/event/${item.id}/${first}`, `${item.title || strings['event.untitled']} · ${formatDate(item.date)}`, item.details ? snippet : '', namesOf(item).join(', '));
+  });
+  group('search.events', eventNodes.length, eventNodes);
+  if (!contacts.length && !noteNodes.length && !eventNodes.length) {
+    const none = document.createElement('p');
+    none.className = 'empty';
+    none.textContent = strings['search.none'];
+    box.append(none);
+  }
+}
+
 function renderList() {
+  if (query) {
+    renderSearch();
+    return;
+  }
+  $('search-results').hidden = true;
+  $('contacts-list').hidden = false;
   const everyone = store.list('contact');
   const contacts = everyone
     .filter((contact) => {
@@ -199,6 +269,12 @@ export function initContacts() {
     el.addEventListener('click', () => {
       location.hash = '#/add-contact';
     });
+  });
+  const input = $('contacts-search');
+  input.addEventListener('input', () => {
+    query = input.value.trim();
+    renderFilter();
+    renderList();
   });
   document.addEventListener('folkhold:ready', load);
   document.addEventListener('folkhold:saved', () => {

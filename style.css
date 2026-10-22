@@ -1455,3 +1455,34 @@ a.btn {
     bottom: var(--space-5);
   }
 }
+
+/* Search */
+.search-box {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--color-field-border);
+  border-radius: var(--radius-button);
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.result {
+  display: block;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.result .result-text {
+  display: block;
+  color: var(--color-muted);
+}
+
+.result small {
+  display: block;
+  color: var(--color-muted);
+}
