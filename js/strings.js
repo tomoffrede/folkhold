@@ -92,7 +92,14 @@ export const strings = {
   'data.errUnreadable': '{count} item(s) could not be decrypted and are not shown.',
 
   'upcoming.title': 'Upcoming',
-  'upcoming.empty': 'Nothing coming up yet.',
+  'upcoming.empty': 'Nothing coming up in this time.',
+  'upcoming.range.30': '30 days',
+  'upcoming.range.90': '90 days',
+  'upcoming.range.365': '1 year',
+  'upcoming.range.0': 'All',
+  'upcoming.seeAll': 'See all {n} upcoming ›',
+  'upcoming.birthday': "{name}'s birthday",
+  'upcoming.turns': '{name} turns {age}',
 
   'settings.title': 'Settings',
   'settings.account': 'Account',
