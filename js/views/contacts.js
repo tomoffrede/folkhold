@@ -3,11 +3,15 @@
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as settings from '../settings.js';
+import * as tags from '../tags.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 
 let loaded = false;
+const selected = new Set(); // tags the list is filtered by
+let matchAll = true; // true: a contact needs all the selected tags; false: any one of them
+let filterOpen = false;
 
 // "First Last", or the nickname when there is no name.
 export function displayName(contact) {
@@ -55,12 +59,101 @@ function sortName(contact) {
   return displayName(contact);
 }
 
+function renderFilter() {
+  const box = $('contacts-filter');
+  const used = tags.inUse();
+  [...selected].forEach((id) => {
+    if (!used.some((tag) => tag.id === id)) selected.delete(id);
+  });
+  box.hidden = used.length === 0;
+  box.replaceChildren();
+  if (used.length === 0) return;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'btn btn-secondary btn-small filter-toggle';
+  toggle.textContent = selected.size ? t('tags.filterCount', { n: selected.size }) : strings['tags.filter'];
+  toggle.setAttribute('aria-expanded', String(filterOpen));
+  toggle.addEventListener('click', () => {
+    filterOpen = !filterOpen;
+    renderFilter();
+  });
+  box.append(toggle);
+  if (selected.size) {
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'link';
+    clear.textContent = strings['tags.clear'];
+    clear.addEventListener('click', () => {
+      selected.clear();
+      renderFilter();
+      renderList();
+    });
+    box.append(clear);
+  }
+  if (!filterOpen) return;
+
+  const chips = document.createElement('div');
+  chips.className = 'prio-row filter-chips';
+  used.forEach((tag) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip prio-chip';
+    chip.textContent = tag.name;
+    chip.setAttribute('aria-pressed', String(selected.has(tag.id)));
+    chip.addEventListener('click', () => {
+      if (selected.has(tag.id)) selected.delete(tag.id);
+      else selected.add(tag.id);
+      renderFilter();
+      renderList();
+    });
+    chips.append(chip);
+  });
+  box.append(chips);
+
+  if (selected.size >= 2) {
+    const mode = document.createElement('div');
+    mode.className = 'prio-row';
+    [[true, strings['tags.matchAll']], [false, strings['tags.matchAny']]].forEach(([value, label]) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'chip prio-chip';
+      chip.textContent = label;
+      chip.setAttribute('aria-pressed', String(matchAll === value));
+      chip.addEventListener('click', () => {
+        matchAll = value;
+        renderFilter();
+        renderList();
+      });
+      mode.append(chip);
+    });
+    box.append(mode);
+  }
+}
+
+// Used from a contact's page: show only the contacts with this tag.
+export function filterByTag(id) {
+  selected.clear();
+  selected.add(id);
+  filterOpen = true;
+  location.hash = '#/contacts';
+  renderFilter();
+  renderList();
+}
+
 function renderList() {
-  const contacts = store
-    .list('contact')
+  const everyone = store.list('contact');
+  const contacts = everyone
+    .filter((contact) => {
+      if (selected.size === 0) return true;
+      const own = contact.tagIds || [];
+      const test = (id) => own.includes(id);
+      return matchAll ? [...selected].every(test) : [...selected].some(test);
+    })
     .sort((a, b) => collator.compare(sortName(a), sortName(b)));
   $('contacts-list').replaceChildren(...contacts.map(personRow));
-  $('contacts-empty').hidden = !(loaded && contacts.length === 0);
+  $('contacts-empty').hidden = !(loaded && everyone.length === 0);
+  $('contacts-nomatch').hidden = !(loaded && everyone.length > 0 && contacts.length === 0);
 }
 
 // Shows a message above the list. Pass retry = true to add a "Try again" button.
@@ -81,6 +174,7 @@ function setStatus(message, retry = false) {
 async function load() {
   loaded = false;
   setStatus(strings['contacts.loading']);
+  renderFilter();
   renderList();
   try {
     const { failed } = await store.loadAll();
@@ -89,6 +183,7 @@ async function load() {
   } catch (error) {
     setStatus(error.message, true);
   }
+  renderFilter();
   renderList();
 }
 
@@ -99,7 +194,10 @@ export function initContacts() {
     });
   });
   document.addEventListener('folkhold:ready', load);
-  document.addEventListener('folkhold:saved', renderList);
+  document.addEventListener('folkhold:saved', () => {
+    renderFilter();
+    renderList();
+  });
   // Coming back from a contact page: show the latest names.
   window.addEventListener('hashchange', () => {
     if (location.hash === '#/contacts') renderList();

@@ -11,10 +11,12 @@ import * as notes from '../notes.js';
 import * as events from '../events.js';
 import { renderEventsSection } from './contact-events.js';
 import { createEventFields, shortName } from './event-fields.js';
+import { createTagInput } from './tag-input.js';
+import * as tags from '../tags.js';
 import { renderNotesSection } from './contact-notes.js';
 import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
-import { displayName } from './contacts.js';
+import { displayName, filterByTag } from './contacts.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -28,7 +30,7 @@ const GROUPS = [
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
-const MANAGED = [...NAME_KEYS, 'birthday', 'met', ...GROUPS.map((group) => group.key)];
+const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', ...GROUPS.map((group) => group.key)];
 const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'short' }));
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }));
 
@@ -40,6 +42,7 @@ let newId = null; // set once a new contact has been saved, so pressing Save aga
 let dirty = false; // there are typed changes that are not saved yet
 let birthdayProblem = false; // the last save left out an impossible birthday
 let timer = null;
+let tagInput = null; // the tag field of the editor that is open
 let previousHash = ''; // where the person came from
 let cameFrom = '#/contacts'; // where "Discard" on a new contact goes back to
 let queue = Promise.resolve(); // saves run one after the other
@@ -104,6 +107,19 @@ function renderView(page, contact) {
   edit.dataset.act = 'edit';
   head.append(titles, edit);
   page.append(head);
+
+  const tagList = (contact.tagIds || []).map((id) => tags.get(id)).filter(Boolean);
+  if (tagList.length) {
+    const row = make('div', 'tag-row');
+    tagList.forEach((tag) => {
+      const chip = make('button', 'tag-chip tag-link', tag.name);
+      chip.type = 'button';
+      chip.dataset.tag = tag.id;
+      chip.title = strings['tags.showContacts'];
+      row.append(chip);
+    });
+    page.append(row);
+  }
 
   const lastMet = settings.get('showLastMet') ? lastTogether(events.listFor(contact.id)) : null;
   if (lastMet) {
@@ -392,7 +408,10 @@ function renderEditor(page, contact) {
   const names = make('div', 'form');
   const nameRow = make('div', 'field-row');
   nameRow.append(nameField('firstName', 'addContact.firstName', contact), nameField('lastName', 'addContact.lastName', contact));
-  names.append(nameRow, nameField('nickname', 'addContact.nickname', contact));
+  tagInput = createTagInput({ tagIds: contact.tagIds || [], immediate: !isNew, onChange: tagsChanged });
+  const tagField = make('div', 'field');
+  tagField.append(make('span', '', strings['tags.label']), tagInput.element);
+  names.append(nameRow, nameField('nickname', 'addContact.nickname', contact), tagField);
 
   const chips = make('div', 'chips');
   let noteRow = null;
@@ -557,6 +576,8 @@ function readFields() {
     if (entries.length) fields[group.key] = entries;
   });
 
+  if (tagInput && tagInput.ids().length) fields.tagIds = tagInput.ids();
+
   let problem = null; // the text key of what could not be saved, if anything
   const block = page.querySelector('[data-group="birthday"]');
   if (!block.hidden) {
@@ -571,6 +592,13 @@ function readFields() {
     if (result.problem && !problem) problem = result.problem;
   }
   return { fields, problem };
+}
+
+// A tag was added or removed: while editing, that is saved at once.
+function tagsChanged() {
+  if (isNew || !editing) return;
+  dirty = true;
+  save();
 }
 
 function setStatus(text, isError = false) {
@@ -719,7 +747,7 @@ function hasChanges() {
   const { fields } = readFields();
   if (isNew) {
     const blankEvent = (e) => !e.title && !e.details && e.blank;
-    return Object.keys(fields).length > 0 || pendingNotes().some((n) => n.title || !rich.isEmpty(n.body)) || pendingEvents().some((e) => !blankEvent(e));
+    return Object.keys(fields).length > 0 || tagInput.count() > 0 || pendingNotes().some((n) => n.title || !rich.isEmpty(n.body)) || pendingEvents().some((e) => !blankEvent(e));
   }
   return canonical(fields) !== canonical(snapshot);
 }
@@ -786,7 +814,11 @@ async function saveNew(button) {
   button.disabled = true;
   setStatus(strings['contact.saving']);
   try {
-    if (!newId) newId = await store.add('contact', fields);
+    if (!newId) {
+      await tagInput.resolve();
+      if (tagInput.ids().length) fields.tagIds = tagInput.ids();
+      newId = await store.add('contact', fields);
+    }
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
     for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
@@ -886,6 +918,7 @@ function bindPage() {
     const button = event.target.closest('button');
     if (!button) return;
     if (button.dataset.add) addEntry(button.dataset.add);
+    else if (button.dataset.tag) filterByTag(button.dataset.tag);
     else if (button.dataset.act === 'edit') goTo(`#/contact/${contactId}/edit`);
     else if (button.dataset.act === 'done') finish(button);
     else if (button.dataset.act === 'discard') discard();
