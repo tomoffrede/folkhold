@@ -1604,3 +1604,8 @@ body.page-open #auth-root {
   margin-top: 0;
   font-size: 1rem;
 }
+
+/* Space between the recovery-screen error and the button under it */
+[data-auth="recovery"] .form-error {
+  margin-bottom: var(--space-4);
+}
