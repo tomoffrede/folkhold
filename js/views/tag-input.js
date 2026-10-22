@@ -103,11 +103,26 @@ export function createTagInput({ tagIds = [], immediate = false, onChange = () =
       menu.append(item);
     }
     if (!menu.children.length) menu.append(make('li', 'picker-empty', strings['tags.none']));
+    active = -1;
     menu.hidden = false;
   }
 
   function closeMenu() {
     menu.hidden = true;
+    active = -1;
+  }
+
+  // Keyboard: arrows move through the suggestions, Enter picks the highlighted one.
+  let active = -1;
+  function options() {
+    return [...menu.querySelectorAll('.picker-option')];
+  }
+  function highlight(index) {
+    const list = options();
+    if (!list.length) return;
+    active = (index + list.length) % list.length;
+    list.forEach((option, i) => option.classList.toggle('is-active', i === active));
+    list[active].scrollIntoView({ block: 'nearest' });
   }
 
   input.addEventListener('focus', openMenu);
@@ -116,9 +131,15 @@ export function createTagInput({ tagIds = [], immediate = false, onChange = () =
   input.addEventListener('blur', () => setTimeout(closeMenu, 200));
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeMenu();
-    else if (event.key === 'Enter' || event.key === ',') {
+    else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      add(input.value);
+      if (menu.hidden) openMenu();
+      highlight(active < 0 ? (event.key === 'ArrowDown' ? 0 : -1) : active + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter' || (event.key === ',' && active < 0)) {
+      event.preventDefault();
+      const picked = !menu.hidden && active >= 0 ? options()[active] : null;
+      if (picked) picked.click();
+      else add(input.value);
     } else if (event.key === 'Backspace' && !input.value && entries.length) {
       entries.pop();
       renderChips();

@@ -1387,3 +1387,49 @@ a.btn {
 .tag-filter .prio-row {
   flex: 1 1 100%;
 }
+
+.picker-option.is-active {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+}
+
+/* Switch between "all these tags" and "any of these tags" */
+.tag-mode {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.tag-mode-label {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+
+.segmented button {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: var(--color-card);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented button + button {
+  border-left: 2px solid var(--color-primary);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}

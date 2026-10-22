@@ -113,20 +113,27 @@ function renderFilter() {
 
   if (selected.size >= 2) {
     const mode = document.createElement('div');
-    mode.className = 'prio-row';
-    [[true, strings['tags.matchAll']], [false, strings['tags.matchAny']]].forEach(([value, label]) => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'chip prio-chip';
-      chip.textContent = label;
-      chip.setAttribute('aria-pressed', String(matchAll === value));
-      chip.addEventListener('click', () => {
+    mode.className = 'tag-mode';
+    const label = document.createElement('span');
+    label.className = 'tag-mode-label';
+    label.textContent = strings['tags.matchLabel'];
+    const group = document.createElement('div');
+    group.className = 'segmented';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', strings['tags.matchLabel']);
+    [[true, strings['tags.matchAll']], [false, strings['tags.matchAny']]].forEach(([value, text]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = text;
+      button.setAttribute('aria-pressed', String(matchAll === value));
+      button.addEventListener('click', () => {
         matchAll = value;
         renderFilter();
         renderList();
       });
-      mode.append(chip);
+      group.append(button);
     });
+    mode.append(label, group);
     box.append(mode);
   }
 }

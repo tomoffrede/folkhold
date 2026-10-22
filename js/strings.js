@@ -31,8 +31,9 @@ export const strings = {
   'tags.filter': 'Filter by tag',
   'tags.filterCount': 'Tags ({n})',
   'tags.clear': 'Clear',
-  'tags.matchAll': 'All of them',
-  'tags.matchAny': 'Any of them',
+  'tags.matchLabel': 'Show contacts that have',
+  'tags.matchAll': 'All these tags',
+  'tags.matchAny': 'Any of these tags',
 
   'addContact.title': 'Add contact',
   'addContact.firstName': 'First name',
