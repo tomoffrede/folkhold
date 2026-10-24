@@ -1632,9 +1632,16 @@ body.page-open #auth-root {
   font-size: 14px;
 }
 
-.lang-switch .link[aria-current='true'] {
-  font-weight: 700;
+.lang-switch .link {
+  color: var(--color-muted);
+  font-weight: 400;
   text-decoration: none;
+}
+
+.lang-switch .link[aria-current='true'] {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 /* Welcome pop-up on the sign-in screen */
@@ -1687,4 +1694,16 @@ body.page-open #auth-root {
   height: 8px;
   border-radius: 50%;
   background: var(--color-accent);
+}
+
+/* Information links at the bottom of every screen (Settings has its own list) */
+.app-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.screen[data-screen="settings"]:not([hidden]) ~ .app-footer {
+  display: none;
 }
