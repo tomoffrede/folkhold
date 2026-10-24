@@ -7,10 +7,10 @@ function person(offset) {
   group.setAttribute('transform', `translate(${offset} 0)`);
   const head = document.createElementNS(NS, 'circle');
   head.setAttribute('cx', '5');
-  head.setAttribute('cy', '3');
-  head.setAttribute('r', '2.6');
+  head.setAttribute('cy', '3.4');
+  head.setAttribute('r', '3');
   const body = document.createElementNS(NS, 'path');
-  body.setAttribute('d', 'M0.5 14V9.5A4.5 4.5 0 0 1 5 6A4.5 4.5 0 0 1 9.5 9.5V14Z');
+  body.setAttribute('d', 'M0.8 14V11A4.2 4.2 0 0 1 5 7.2A4.2 4.2 0 0 1 9.2 11V14Z');
   group.append(head, body);
   return group;
 }

@@ -1,9 +1,9 @@
--- Keep-alive: a tiny function that a scheduled job calls once a day, so the free Supabase project never looks inactive.
--- It reads one row from a table (it returns nothing private; the access rules still apply) and answers "ok".
 create or replace function public.ping()
 returns text
 language plpgsql
 stable
+security definer
+set search_path = public
 as $$
 begin
   perform 1 from public.user_keys limit 1;
@@ -11,4 +11,5 @@ begin
 end;
 $$;
 
+revoke all on function public.ping() from public;
 grant execute on function public.ping() to anon, authenticated;

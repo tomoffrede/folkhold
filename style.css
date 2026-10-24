@@ -1707,3 +1707,235 @@ body.page-open #auth-root {
 .screen[data-screen="settings"]:not([hidden]) ~ .app-footer {
   display: none;
 }
+
+/* Pop-up windows (questions and choices) */
+.modal {
+  width: min(92vw, 400px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.modal::backdrop {
+  background: rgba(43, 42, 39, 0.45);
+}
+
+.modal-text {
+  margin: 0 0 var(--space-4);
+  font-size: 1.05rem;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.modal .prompt {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+/* Round B polish */
+.who-icon {
+  height: 11px;
+  margin-right: 5px;
+  opacity: 0.5;
+}
+
+.prio-chip .who-icon {
+  height: 16px;
+  opacity: 1;
+}
+
+/* Bold / italic / underline: a small box floating at the bottom right of the text field */
+.rt {
+  position: relative;
+}
+
+.rt-toolbar {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  box-shadow: 0 1px 4px rgba(43, 42, 39, 0.15);
+}
+
+.rt-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 1rem;
+}
+
+.rt-editor {
+  padding-bottom: 52px;
+}
+
+/* A smaller, quieter all/any switch */
+.tag-mode {
+  gap: var(--space-2);
+  font-size: 0.85rem;
+}
+
+.tag-mode-label {
+  font-weight: 400;
+}
+
+.segmented {
+  border-width: 1px;
+}
+
+.segmented button {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.segmented button + button {
+  border-left-width: 1px;
+}
+
+/* Search line with the Filter button, and the filter panel */
+.search-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.search-line .search-wrap {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.filter-button {
+  flex: none;
+  min-height: 48px;
+}
+
+.tag-filter {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+}
+
+.tag-filter[hidden] {
+  display: none;
+}
+
+.filter-section + .filter-section {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.filter-heading {
+  margin: 0 0 var(--space-2);
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.filter-adv-toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter-adv-toggle::after {
+  content: ' ▾';
+}
+
+.filter-adv-toggle[aria-expanded='true']::after {
+  content: ' ▴';
+}
+
+.cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.cond-select {
+  min-height: 40px;
+  max-width: 100%;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-field-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.cond-remove {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.filter-add {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+.tag-filter > .link {
+  display: block;
+  margin-top: var(--space-3);
+  font-size: 0.9rem;
+}
+
+.cond-row:not(.cond-wide) {
+  flex-wrap: nowrap;
+}
+
+.cond-row .cond-select {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.cond-row .cond-select:first-child:not(:only-of-type) {
+  flex: 0 0 auto;
+}
+
+.cond-row .cond-remove {
+  flex: none;
+}
+
+.cond-wide .cond-select:first-child {
+  flex: 1 1 auto;
+}
+
+.cond-wide .cond-select:nth-child(2) {
+  flex: 0 0 auto;
+}

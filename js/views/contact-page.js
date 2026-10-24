@@ -19,6 +19,7 @@ import { renderNotesSection } from './contact-notes.js';
 import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
 import { displayName, filterByTag } from './contacts.js';
+import { confirmModal } from './modal.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -397,16 +398,6 @@ function renderEditor(page, contact) {
   const head = make('div', 'contact-head');
   head.append(titles, discardButton());
 
-  const discardRow = make('div', 'confirm-row discard-row');
-  discardRow.hidden = true;
-  const discardYes = make('button', 'btn btn-danger btn-small', strings['contact.discardYes']);
-  discardYes.type = 'button';
-  discardYes.dataset.act = 'discard-yes';
-  const discardNo = make('button', 'btn btn-secondary btn-small', strings['contact.discardNo']);
-  discardNo.type = 'button';
-  discardNo.dataset.act = 'discard-no';
-  discardRow.append(make('span', 'confirm-text', strings[isNew ? 'contact.discardSureNew' : 'contact.discardSure']), discardYes, discardNo);
-
   const names = make('div', 'form');
   const nameRow = make('div', 'field-row');
   nameRow.append(nameField('firstName', 'addContact.firstName', contact), nameField('lastName', 'addContact.lastName', contact));
@@ -453,18 +444,9 @@ function renderEditor(page, contact) {
   const ask = make('button', 'link link-danger', strings['contact.delete']);
   ask.type = 'button';
   ask.dataset.act = 'delete';
-  const sure = make('div', 'confirm-row');
-  sure.hidden = true;
-  const yes = make('button', 'btn btn-danger btn-small', strings['contact.deleteYes']);
-  yes.type = 'button';
-  yes.dataset.act = 'delete-yes';
-  const no = make('button', 'btn btn-secondary btn-small', strings['contact.deleteNo']);
-  no.type = 'button';
-  no.dataset.act = 'delete-no';
-  sure.append(make('span', 'confirm-text', strings['contact.deleteSure']), yes, no);
-  danger.append(ask, sure);
+  danger.append(ask);
 
-  page.append(head, discardRow, names);
+  page.append(head, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
   page.append(birthdayBlock(contact.birthday), metBlock(contact.met));
   if (isNew) {
@@ -758,15 +740,14 @@ function hasChanges() {
   return canonical(fields) !== canonical(snapshot);
 }
 
-function showDiscardQuestion(show) {
-  const page = $('contact-page');
-  page.querySelector('.discard-row').hidden = !show;
-  page.querySelector('[data-act="discard"]').hidden = show;
-}
-
-function discard() {
-  if (hasChanges()) showDiscardQuestion(true);
-  else leaveEditor();
+async function discard(button) {
+  if (!hasChanges()) return leaveEditor();
+  const yes = await confirmModal({
+    text: strings[isNew ? 'contact.discardSureNew' : 'contact.discardSure'],
+    yes: strings['contact.discardYes'],
+    no: strings['contact.discardNo'],
+  });
+  if (yes) discardYes(button);
 }
 
 function leaveEditor() {
@@ -907,10 +888,13 @@ async function deleteContact(button) {
   }
 }
 
-function showDeleteQuestion(show) {
-  const page = $('contact-page');
-  page.querySelector('[data-act="delete"]').hidden = show;
-  page.querySelector('.danger .confirm-row').hidden = !show;
+async function askDelete(button) {
+  const yes = await confirmModal({
+    text: strings['contact.deleteSure'],
+    yes: strings['contact.deleteYes'],
+    no: strings['contact.deleteNo'],
+  });
+  if (yes) deleteContact(button);
 }
 
 function bindPage() {
@@ -938,9 +922,7 @@ function bindPage() {
     else if (button.dataset.tag) filterByTag(button.dataset.tag);
     else if (button.dataset.act === 'edit') goTo(`#/contact/${contactId}/edit`);
     else if (button.dataset.act === 'done') finish(button);
-    else if (button.dataset.act === 'discard') discard();
-    else if (button.dataset.act === 'discard-no') showDiscardQuestion(false);
-    else if (button.dataset.act === 'discard-yes') discardYes(button);
+    else if (button.dataset.act === 'discard') discard(button);
     else if (button.dataset.act === 'save-new') saveNew(button);
     else if (button.dataset.act === 'remove-note') button.closest('.pending-note').remove();
     else if (button.dataset.act === 'labels') toggleMenu(button);
@@ -948,9 +930,7 @@ function bindPage() {
     else if (button.dataset.act === 'remove') removeEntry(button);
     else if (button.dataset.act === 'remove-birthday') removeBirthday();
     else if (button.dataset.act === 'remove-met') removeMet();
-    else if (button.dataset.act === 'delete') showDeleteQuestion(true);
-    else if (button.dataset.act === 'delete-no') showDeleteQuestion(false);
-    else if (button.dataset.act === 'delete-yes') deleteContact(button);
+    else if (button.dataset.act === 'delete') askDelete(button);
   });
 
   // A tap anywhere else, or Escape, closes an open label menu.

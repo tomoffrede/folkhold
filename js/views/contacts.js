@@ -6,6 +6,7 @@ import * as settings from '../settings.js';
 import * as tags from '../tags.js';
 import { search } from '../search.js';
 import { formatDate } from '../dates.js';
+import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
@@ -14,6 +15,8 @@ let loaded = false;
 const selected = new Set(); // tags the list is filtered by
 let matchAll = true; // true: a contact needs all the selected tags; false: any one of them
 let filterOpen = false;
+let advancedOpen = false;
+const conditions = []; // advanced filter conditions (see filters.js)
 let query = ''; // what is typed in the search box
 
 // "First Last", or the nickname when there is no name.
@@ -62,8 +65,146 @@ function sortName(contact) {
   return displayName(contact);
 }
 
+const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }));
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function select(options, value, onChange, label) {
+  const box = el('select', 'cond-select');
+  if (label) box.setAttribute('aria-label', label);
+  options.forEach(([optionValue, text]) => {
+    const option = el('option', '', text);
+    option.value = String(optionValue);
+    box.append(option);
+  });
+  box.value = String(value);
+  box.addEventListener('change', () => onChange(box.value));
+  return box;
+}
+
+function refresh() {
+  renderFilter();
+  renderList();
+}
+
+function conditionKey(condition) {
+  return condition.type === 'has' ? condition.field : condition.type;
+}
+
+function conditionRow(condition, index) {
+  const row = el('div', condition.type === 'has' ? 'cond-row' : 'cond-row cond-wide');
+  if (condition.type === 'has') {
+    row.append(
+      select([[0, strings['filter.has']], [1, strings['filter.hasNot']]], condition.not ? 1 : 0, (value) => {
+        condition.not = value === '1';
+        refresh();
+      }),
+    );
+  }
+  const whats = [...HAS_FIELDS.map((field) => [field, strings[`filter.field.${field}`]]), ['lastMet', strings['filter.lastMet']], ['birthdayMonth', strings['filter.birthdayIn']]];
+  row.append(
+    select(whats, conditionKey(condition), (value) => {
+      if (value === 'lastMet') conditions[index] = { type: 'lastMet', months: 6 };
+      else if (value === 'birthdayMonth') conditions[index] = { type: 'birthdayMonth', month: new Date().getMonth() + 1 };
+      else conditions[index] = { type: 'has', field: value, not: condition.type === 'has' ? condition.not : false };
+      refresh();
+    }),
+  );
+  if (condition.type === 'lastMet') {
+    row.append(
+      select(LAST_MET_MONTHS.map((n) => [n, t('filter.lastMetOption', { n })]), condition.months, (value) => {
+        condition.months = Number(value);
+        refresh();
+      }),
+    );
+  } else if (condition.type === 'birthdayMonth') {
+    row.append(
+      select(MONTHS.map((name, i) => [i + 1, name]), condition.month, (value) => {
+        condition.month = Number(value);
+        refresh();
+      }),
+    );
+  }
+  const remove = el('button', 'cond-remove', '×');
+  remove.type = 'button';
+  remove.setAttribute('aria-label', strings['filter.remove']);
+  remove.addEventListener('click', () => {
+    conditions.splice(index, 1);
+    refresh();
+  });
+  row.append(remove);
+  return row;
+}
+
+function tagSection(used) {
+  const section = el('div', 'filter-section');
+  section.append(el('h3', 'filter-heading', strings['filter.tags']));
+  const chips = el('div', 'prio-row filter-chips');
+  used.forEach((tag) => {
+    const chip = el('button', 'chip prio-chip', tag.name);
+    chip.type = 'button';
+    chip.setAttribute('aria-pressed', String(selected.has(tag.id)));
+    chip.addEventListener('click', () => {
+      if (selected.has(tag.id)) selected.delete(tag.id);
+      else selected.add(tag.id);
+      refresh();
+    });
+    chips.append(chip);
+  });
+  section.append(chips);
+  if (selected.size >= 2) {
+    const mode = el('div', 'tag-mode');
+    mode.append(el('span', 'tag-mode-label', strings['tags.matchLabel']));
+    const group = el('div', 'segmented');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', strings['tags.matchLabel']);
+    [[true, strings['tags.matchAll']], [false, strings['tags.matchAny']]].forEach(([value, text]) => {
+      const button = el('button', '', text);
+      button.type = 'button';
+      button.setAttribute('aria-pressed', String(matchAll === value));
+      button.addEventListener('click', () => {
+        matchAll = value;
+        refresh();
+      });
+      group.append(button);
+    });
+    mode.append(group);
+    section.append(mode);
+  }
+  return section;
+}
+
+function advancedSection() {
+  const section = el('div', 'filter-section');
+  const head = el('button', 'filter-adv-toggle', strings['filter.advanced']);
+  head.type = 'button';
+  head.setAttribute('aria-expanded', String(advancedOpen));
+  head.addEventListener('click', () => {
+    advancedOpen = !advancedOpen;
+    renderFilter();
+  });
+  section.append(head);
+  if (!advancedOpen) return section;
+  conditions.forEach((condition, index) => section.append(conditionRow(condition, index)));
+  const add = el('button', 'link filter-add', strings['filter.add']);
+  add.type = 'button';
+  add.addEventListener('click', () => {
+    conditions.push({ type: 'has', field: 'birthday', not: false });
+    refresh();
+  });
+  section.append(add);
+  return section;
+}
+
 function renderFilter() {
   const box = $('contacts-filter');
+  const button = $('filter-button');
+  button.hidden = Boolean(query);
   if (query) {
     box.hidden = true;
     return;
@@ -72,76 +213,24 @@ function renderFilter() {
   [...selected].forEach((id) => {
     if (!used.some((tag) => tag.id === id)) selected.delete(id);
   });
-  box.hidden = used.length === 0;
+  const active = selected.size + conditions.length;
+  button.textContent = active ? t('filter.buttonCount', { n: active }) : strings['filter.button'];
+  button.setAttribute('aria-expanded', String(filterOpen));
+  box.hidden = !filterOpen;
   box.replaceChildren();
-  if (used.length === 0) return;
-
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'btn btn-secondary btn-small filter-toggle';
-  toggle.textContent = selected.size ? t('tags.filterCount', { n: selected.size }) : strings['tags.filter'];
-  toggle.setAttribute('aria-expanded', String(filterOpen));
-  toggle.addEventListener('click', () => {
-    filterOpen = !filterOpen;
-    renderFilter();
-  });
-  box.append(toggle);
-  if (selected.size) {
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'link';
-    clear.textContent = strings['tags.clear'];
-    clear.addEventListener('click', () => {
-      selected.clear();
-      renderFilter();
-      renderList();
-    });
-    box.append(clear);
-  }
   if (!filterOpen) return;
 
-  const chips = document.createElement('div');
-  chips.className = 'prio-row filter-chips';
-  used.forEach((tag) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip prio-chip';
-    chip.textContent = tag.name;
-    chip.setAttribute('aria-pressed', String(selected.has(tag.id)));
-    chip.addEventListener('click', () => {
-      if (selected.has(tag.id)) selected.delete(tag.id);
-      else selected.add(tag.id);
-      renderFilter();
-      renderList();
+  if (used.length) box.append(tagSection(used));
+  box.append(advancedSection());
+  if (active) {
+    const clear = el('button', 'link', strings['filter.clearAll']);
+    clear.type = 'button';
+    clear.addEventListener('click', () => {
+      selected.clear();
+      conditions.length = 0;
+      refresh();
     });
-    chips.append(chip);
-  });
-  box.append(chips);
-
-  if (selected.size >= 2) {
-    const mode = document.createElement('div');
-    mode.className = 'tag-mode';
-    const label = document.createElement('span');
-    label.className = 'tag-mode-label';
-    label.textContent = strings['tags.matchLabel'];
-    const group = document.createElement('div');
-    group.className = 'segmented';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', strings['tags.matchLabel']);
-    [[true, strings['tags.matchAll']], [false, strings['tags.matchAny']]].forEach(([value, text]) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = text;
-      button.setAttribute('aria-pressed', String(matchAll === value));
-      button.addEventListener('click', () => {
-        matchAll = value;
-        renderFilter();
-        renderList();
-      });
-      group.append(button);
-    });
-    mode.append(label, group);
-    box.append(mode);
+    box.append(clear);
   }
 }
 
@@ -150,6 +239,7 @@ export function filterByTag(id) {
   selected.clear();
   selected.add(id);
   filterOpen = true;
+  conditions.length = 0;
   location.hash = '#/contacts';
   renderFilter();
   renderList();
@@ -222,6 +312,7 @@ function renderList() {
   const everyone = store.list('contact');
   const contacts = everyone
     .filter((contact) => {
+      if (!matchesAll(contact, conditions)) return false;
       if (selected.size === 0) return true;
       const own = contact.tagIds || [];
       const test = (id) => own.includes(id);
@@ -230,6 +321,7 @@ function renderList() {
     .sort((a, b) => collator.compare(sortName(a), sortName(b)));
   $('contacts-list').replaceChildren(...contacts.map(personRow));
   $('contacts-empty').hidden = !(loaded && everyone.length === 0);
+  $('contacts-nomatch').textContent = strings['filter.noMatch'];
   $('contacts-nomatch').hidden = !(loaded && everyone.length > 0 && contacts.length === 0);
 }
 
@@ -278,6 +370,11 @@ export function initContacts() {
     renderFilter();
     renderList();
   };
+  $('filter-button').addEventListener('click', () => {
+    filterOpen = !filterOpen;
+    if (conditions.length) advancedOpen = true;
+    renderFilter();
+  });
   input.addEventListener('input', update);
   clear.addEventListener('click', () => {
     input.value = '';

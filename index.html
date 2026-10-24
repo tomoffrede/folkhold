@@ -57,9 +57,12 @@
 <button type="button" class="btn btn-secondary btn-small" data-action="add-contact" data-text="contacts.add"></button>
 </div>
 <p class="empty" id="contacts-status" hidden></p>
+<div class="search-line">
 <div class="search-wrap">
 <input type="search" class="search-box" id="contacts-search" data-placeholder="search.placeholder" autocomplete="off" spellcheck="false">
 <button type="button" class="search-clear" id="search-clear" data-label="search.clear" hidden>×</button>
+</div>
+<button type="button" class="btn btn-secondary btn-small filter-button" id="filter-button" aria-expanded="false" data-text="filter.button"></button>
 </div>
 <div class="tag-filter" id="contacts-filter" hidden></div>
 <ul class="people" id="contacts-list"></ul>
@@ -165,7 +168,9 @@
 
 <div class="setting danger">
 <button type="button" class="link link-danger" id="delete-open" data-text="settings.deleteAccount"></button>
-<form class="form" id="delete-form" novalidate hidden>
+<dialog class="modal" id="delete-dialog" aria-labelledby="delete-title">
+<form class="form" id="delete-form" novalidate>
+<h3 class="prompt-title" id="delete-title" data-text="settings.deleteAccount"></h3>
 <p data-text="settings.deleteWarning"></p>
 <label class="field"><span data-text="settings.deletePassword"></span><input id="delete-password" type="password" autocomplete="current-password"></label>
 <p class="form-error" id="delete-error" role="alert" hidden></p>
@@ -174,6 +179,7 @@
 <button type="button" class="btn btn-secondary btn-small" id="delete-cancel" data-text="settings.tagCancel"></button>
 </div>
 </form>
+</dialog>
 </div>
 </section>
 

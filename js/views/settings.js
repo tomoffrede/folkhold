@@ -6,6 +6,7 @@ import * as tags from '../tags.js';
 import * as auth from '../auth.js';
 import { downloadExport } from '../export.js';
 import { clearAllDrafts } from '../drafts.js';
+import { confirmModal, closeOnOutsideClick } from './modal.js';
 
 const $ = (id) => document.getElementById(id);
 const radios = () => document.querySelectorAll('input[name="contact-sort"]');
@@ -62,7 +63,6 @@ async function save(key, value) {
 // ---------- tags ----------
 
 let renaming = null; // id of the tag being renamed
-let deleting = null; // id of the tag being deleted (waiting for "Yes")
 
 async function run(task) {
   showMessage('');
@@ -111,32 +111,6 @@ function tagRow(tag) {
   name.append(make('b', '', tag.name), make('small', '', t(total === 1 ? 'settings.tagOne' : 'settings.tagMany', { n: total })));
   row.append(name);
 
-  if (deleting === tag.id) {
-    const sure = make('div', 'confirm-row');
-    sure.append(make('span', 'confirm-text', total ? t('settings.tagDeleteSure', { n: total }) : strings['settings.tagDeleteSureNone']));
-    const yes = make('button', 'btn btn-danger btn-small', strings['settings.tagDeleteYes']);
-    const keep = make('button', 'btn btn-secondary btn-small', strings['note.keep']);
-    yes.type = 'button';
-    keep.type = 'button';
-    yes.addEventListener('click', () =>
-      run(async () => {
-        yes.disabled = true;
-        await tags.remove(tag.id);
-        deleting = null;
-        renderTags();
-      }).finally(() => {
-        yes.disabled = false;
-      }),
-    );
-    keep.addEventListener('click', () => {
-      deleting = null;
-      renderTags();
-    });
-    sure.append(yes, keep);
-    row.append(sure);
-    return row;
-  }
-
   const actions = make('div', 'tag-manage-actions');
   const rename = make('button', 'btn btn-secondary btn-small', strings['settings.tagRename']);
   const del = make('button', 'link link-danger', strings['settings.tagDelete']);
@@ -144,15 +118,22 @@ function tagRow(tag) {
   del.type = 'button';
   rename.addEventListener('click', () => {
     renaming = tag.id;
-    deleting = null;
     showMessage('');
     renderTags();
   });
-  del.addEventListener('click', () => {
-    deleting = tag.id;
+  del.addEventListener('click', async () => {
     renaming = null;
     showMessage('');
-    renderTags();
+    const yes = await confirmModal({
+      text: total ? t('settings.tagDeleteSure', { n: total }) : strings['settings.tagDeleteSureNone'],
+      yes: strings['settings.tagDeleteYes'],
+      no: strings['note.keep'],
+    });
+    if (!yes) return renderTags();
+    run(async () => {
+      await tags.remove(tag.id);
+      renderTags();
+    });
   });
   actions.append(rename, del);
   row.append(actions);
@@ -207,18 +188,14 @@ function bindAccount() {
   });
 
   const deleteForm = $('delete-form');
-  const closeDelete = () => {
-    deleteForm.hidden = true;
-    $('delete-open').hidden = false;
+  const deleteDialog = $('delete-dialog');
+  closeOnOutsideClick(deleteDialog);
+  deleteDialog.addEventListener('close', () => {
     $('delete-password').value = '';
     $('delete-error').hidden = true;
-  };
-  $('delete-open').addEventListener('click', () => {
-    deleteForm.hidden = false;
-    $('delete-open').hidden = true;
-    $('delete-password').focus();
   });
-  $('delete-cancel').addEventListener('click', closeDelete);
+  $('delete-open').addEventListener('click', () => deleteDialog.showModal());
+  $('delete-cancel').addEventListener('click', () => deleteDialog.close());
   deleteForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = deleteForm.querySelector('[type="submit"]');

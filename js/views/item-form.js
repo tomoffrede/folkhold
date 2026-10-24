@@ -17,6 +17,7 @@ import { displayName } from './contacts.js';
 import * as birthdays from '../birthdays.js';
 import { formatDate } from '../dates.js';
 import { showToast } from './toast.js';
+import { openModal, confirmModal } from './modal.js';
 
 const $ = (id) => document.getElementById(id);
 const ID = '([0-9a-f-]+)';
@@ -316,17 +317,14 @@ function showChoice({ formWrap, promptWrap, title, text, confirmLabel, danger, o
   back.type = 'button';
 
   panel.append(list, actions, error, confirm, back);
-  promptWrap.append(panel);
-  formWrap.hidden = true;
-  promptWrap.hidden = false;
-  window.scrollTo(0, 0);
+  const dialog = openModal(panel);
 
-  back.addEventListener('click', () => {
-    promptWrap.hidden = true;
-    formWrap.hidden = false;
-  });
+  back.addEventListener('click', () => dialog.close());
   confirm.addEventListener('click', () =>
-    runBusy(confirm, error, () => onConfirm(boxes.filter((box) => box.checked).map((box) => box.value))),
+    runBusy(confirm, error, async () => {
+      await onConfirm(boxes.filter((box) => box.checked).map((box) => box.value));
+      dialog.close();
+    }),
   );
 }
 
@@ -357,29 +355,15 @@ function buildDelete({ route, note, contact, others, error, formWrap, promptWrap
     return wrap;
   }
 
-  const sure = make('div', 'confirm-row');
-  sure.hidden = true;
-  sure.append(make('span', 'confirm-text', S(route.kind, 'deleteSure')));
-  const yes = make('button', 'btn btn-danger btn-small', strings['note.deleteYes']);
-  yes.type = 'button';
-  yes.addEventListener('click', () =>
-    runBusy(yes, error, async () => {
+  ask.addEventListener('click', async () => {
+    const yes = await confirmModal({ text: S(route.kind, 'deleteSure'), yes: strings['note.deleteYes'], no: strings['note.keep'] });
+    if (!yes) return;
+    runBusy(ask, error, async () => {
       await kind.api.removeEverywhere(note);
       finish(route);
-    }),
-  );
-  const keep = make('button', 'btn btn-secondary btn-small', strings['note.keep']);
-  keep.type = 'button';
-  keep.addEventListener('click', () => {
-    sure.hidden = true;
-    ask.hidden = false;
+    });
   });
-  sure.append(yes, keep);
-  ask.addEventListener('click', () => {
-    ask.hidden = true;
-    sure.hidden = false;
-  });
-  wrap.append(ask, sure);
+  wrap.append(ask);
   return wrap;
 }
 
