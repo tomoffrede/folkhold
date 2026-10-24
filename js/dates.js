@@ -8,17 +8,16 @@
 //   yearly    true for a day and month without a year ("14 Mar"); it has month and day instead of from and to
 // Events saved earlier with { precision, day, month, year } are still understood (see modernize).
 
-const LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const SHORT = LONG.map((name) => name.slice(0, 3));
-const MONTH_LOOKUP = {};
-LONG.forEach((name, i) => {
-  MONTH_LOOKUP[name.toLowerCase()] = i + 1;
-  MONTH_LOOKUP[name.slice(0, 3).toLowerCase()] = i + 1;
-});
-MONTH_LOOKUP.sept = 9;
-const SEASONS = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', fall: 'Autumn', winter: 'Winter' };
+import { strings, t } from './strings.js';
+import { fold, MONTH_LOOKUP, SEASONS, monthName, relativeDay as relativeDayOf, normalizeWords, APPROX, TO_WORDS } from './datewords.js';
+
+// Month names and labels come from the language in use (see datewords.js and the "dates." texts in strings.js).
+const dayMonth = (d, m, long = false) => t(long ? 'dates.dayMonthLong' : 'dates.dayMonth', { d, m: monthName(m, long) });
+// "14–16 March": the first day is replaced by the range (German keeps its dots: "14.–16. März").
+const dayRange = (a, b, m, long) => dayMonth(a, m, long).replace(new RegExp(`\\b${a}(\\.?)`), `${a}$1–${b}$1`);
+const yearJoin = (long) => (long ? strings['dates.yearJoinLong'] : ' '); // Portuguese and Spanish write "14 de março de 2024" in full
 const PARTS = ['early', 'mid', 'late'];
-const cap = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+const partLabel = (part, x) => (part ? t(`dates.${part}`, { x }) : x);
 
 export function daysInMonth(month, year) {
   return new Date(year || 2000, month, 0).getDate(); // without a year, 29 February is allowed
@@ -58,33 +57,33 @@ function validYear(year) {
 
 // Turns pieces ({ kind, ... }) into a description with span and labels. Returns { error } for impossible dates.
 function describe(p) {
-  const month = (long) => (long ? LONG : SHORT)[p.m - 1];
+  const month = (long) => monthName(p.m, long);
   if (p.y && !validYear(p.y)) return { error: 'invalid' };
   if (p.m && (p.m < 1 || p.m > 12)) return { error: 'invalid' };
   if (p.d && (p.d < 1 || p.d > daysInMonth(p.m, p.y))) return { error: 'invalid' };
 
-  if (p.kind === 'exact') return { ...p, from: iso(p.y, p.m, p.d), to: iso(p.y, p.m, p.d), label: (l) => `${p.d} ${month(l)} ${p.y}` };
-  if (p.kind === 'yearly') return { ...p, label: (l) => `${p.d} ${month(l)}` };
+  if (p.kind === 'exact') return { ...p, from: iso(p.y, p.m, p.d), to: iso(p.y, p.m, p.d), label: (l) => `${dayMonth(p.d, p.m, l)}${yearJoin(l)}${p.y}` };
+  if (p.kind === 'yearly') return { ...p, label: (l) => dayMonth(p.d, p.m, l) };
   if (p.kind === 'month') {
     const last = daysInMonth(p.m, p.y);
     const [a, b] = p.part === 'early' ? [1, 10] : p.part === 'mid' ? [11, 20] : p.part === 'late' ? [21, last] : [1, last];
-    return { ...p, vague: Boolean(p.part), from: iso(p.y, p.m, a), to: iso(p.y, p.m, Math.min(b, last)), label: (l) => `${p.part ? `${cap(p.part)} ` : ''}${month(l)} ${p.y}` };
+    return { ...p, vague: Boolean(p.part), from: iso(p.y, p.m, a), to: iso(p.y, p.m, Math.min(b, last)), label: (l) => partLabel(p.part, `${month(l)}${yearJoin(l)}${p.y}`) };
   }
   if (p.kind === 'year') {
     const [a, b] = p.part === 'early' ? [1, 4] : p.part === 'mid' ? [5, 8] : p.part === 'late' ? [9, 12] : [1, 12];
-    return { ...p, vague: Boolean(p.part), from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => `${p.part ? `${cap(p.part)} ` : ''}${p.y}` };
+    return { ...p, vague: Boolean(p.part), from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => partLabel(p.part, String(p.y)) };
   }
   // season
   const ranges = { Spring: [3, 5], Summer: [6, 8], Autumn: [9, 11], Winter: [12, 14] };
   const [a, b] = ranges[p.season];
-  return { ...p, vague: true, from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => `${p.season} ${p.y}` };
+  return { ...p, vague: true, from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => `${strings[`dates.${p.season.toLowerCase()}`]} ${p.y}` };
 }
 
 // One date without a range. "ctx" can hold a year to use when the text has none (for the first half of a range).
 function parseSingle(raw) {
   const s = raw.trim();
   const now = new Date();
-  const relativeDay = { today: 0, yesterday: -1, tomorrow: 1 }[s];
+  const relativeDay = relativeDayOf(s);
   if (relativeDay !== undefined) {
     const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + relativeDay);
     return describe({ kind: 'exact', y: day.getFullYear(), m: day.getMonth() + 1, d: day.getDate() });
@@ -104,12 +103,7 @@ function parseSingle(raw) {
   if (/^\d{4}$/.test(s)) return describe({ kind: 'year', y: +s });
 
   // Words: early/mid/late, a month or season name, a day and a year, in the usual orders.
-  const words = s
-    .replace(/\b(\d{1,2})(st|nd|rd|th)\b/g, '$1')
-    .replace(/\b(beginning|start)\b/g, 'early')
-    .replace(/\bmiddle\b/g, 'mid')
-    .replace(/\bend\b/g, 'late')
-    .replace(/\bof\b/g, ' ')
+  const words = normalizeWords(s)
     .replace(/(early|mid|late)[-\s]*/g, '$1 ')
     .replace(/[,.]/g, ' ')
     .trim()
@@ -158,7 +152,7 @@ function parseSingle(raw) {
 
 // "~" or a word like "around" in front makes a date approximate.
 function stripApprox(text) {
-  const m = text.trim().match(/^(?:~|≈|c\.|ca\.|circa\b|around\b|about\b|approx\.?|approximately\b)\s*(.*)$/i);
+  const m = text.trim().match(new RegExp(`^${APPROX}\\s*(.*)$`, 'i'));
   return m ? { approx: true, rest: m[1] } : { approx: false, rest: text.trim() };
 }
 
@@ -180,19 +174,19 @@ function widen(d) {
 function spanNote(from, to) {
   const [fy, fm, fd] = from.split('-').map(Number);
   const [ty, tm, td] = to.split('-').map(Number);
-  if (fy === ty && fm === tm) return fd === td ? `${fd} ${LONG[fm - 1]}` : `${fd}–${td} ${LONG[fm - 1]}`;
-  if (fy === ty) return `${SHORT[fm - 1]}–${SHORT[tm - 1]}`;
+  if (fy === ty && fm === tm) return fd === td ? dayMonth(fd, fm, true) : dayRange(fd, td, fm, true);
+  if (fy === ty) return `${monthName(fm)}–${monthName(tm)}`;
   if (fm === 1 && fd === 1 && tm === 12 && td === 31) return `${fy}–${ty}`;
-  return `${SHORT[fm - 1]} ${fy}–${SHORT[tm - 1]} ${ty}`;
+  return `${monthName(fm)} ${fy}–${monthName(tm)} ${ty}`;
 }
 
 function rangeLabel(left, right, long) {
   const plain = (d) => !d.part && d.kind;
   if (left.kind === 'month' && right.kind === 'month' && plain(left) && plain(right) && left.y === right.y) {
-    return `${(long ? LONG : SHORT)[left.m - 1]}–${(long ? LONG : SHORT)[right.m - 1]} ${left.y}`;
+    return `${monthName(left.m, long)}–${monthName(right.m, long)}${yearJoin(long)}${left.y}`;
   }
   if (left.kind === 'exact' && right.kind === 'exact' && left.y === right.y && left.m === right.m) {
-    return `${left.d}–${right.d} ${(long ? LONG : SHORT)[left.m - 1]} ${left.y}`;
+    return `${dayRange(left.d, right.d, left.m, long)}${yearJoin(long)}${left.y}`;
   }
   return `${left.label(long)}–${right.label(long)}`;
 }
@@ -202,8 +196,12 @@ function rangeLabel(left, right, long) {
 export function parseDate(input) {
   const typed = String(input || '').trim();
   if (!typed) return { error: 'empty' };
-  const { approx, rest } = stripApprox(typed);
-  const text = rest.toLowerCase().replace(/[–—]/g, '-');
+  const { approx, rest } = stripApprox(fold(typed));
+  const text = rest
+    .replace(/[–—]/g, '-')
+    .replace(/(\d)\.(?=\s*-)/g, '$1') // "14.–16. März": the dot after a day is dropped
+    .replace(/(\d)\.\s+(?=[a-z])/g, '$1 ')
+    .replace(/^(?:del|de|du|von|vom|from)\s+(?=\d)/, ''); // "del 14 al 16 de marzo", "du 14 au 16 mars"
   if (!text) return { error: 'unknown' };
 
   let single = parseSingle(text);
@@ -216,8 +214,9 @@ export function parseDate(input) {
       yearless = true;
     }
   }
-  if (single.error && /-|\bto\b|\buntil\b/.test(text)) {
-    const cut = text.split(/\s*(?:-|\bto\b|\buntil\b)\s*/);
+  const toRegex = new RegExp(`-|\\b${TO_WORDS}\\b`);
+  if (single.error && toRegex.test(text)) {
+    const cut = text.split(new RegExp(`\\s*(?:-|\\b${TO_WORDS}\\b)\\s*`));
     // "14-16 march": the first half is only a day.
     const lead = cut.length === 2 && /^\d{1,2}$/.test(cut[0]) && cut[1].match(/^\d{1,2}\s+(.+)$/);
     if (lead) cut[0] = `${cut[0]} ${lead[1]}`;
@@ -266,8 +265,8 @@ export function parseDate(input) {
   }
   const yearly = !range && single.kind === 'yearly';
   if (approx && !yearly) {
-    short = `c. ${short}`;
-    long = `c. ${long}`;
+    short = t('dates.approx', { x: short });
+    long = t('dates.approx', { x: long });
   }
 
   let date;
@@ -286,7 +285,7 @@ export function parseDate(input) {
   const exact = !yearly && !yearless && from === to;
   let reading = long;
   if (!yearly && (vague || approx)) reading += ` (~${yearless ? noYear(spanNote(from, to)) : spanNote(from, to)})`;
-  if (yearly || yearless) reading += ' (every year)';
+  if (yearly || yearless) reading += ` (${strings['dates.everyYear']})`;
   const days = from ? (toTs(to) - toTs(from)) / 86400000 : 0;
   return { date, reading, exact, yearly: yearly || yearless, repeatable: !yearly && !yearless && days <= REPEAT_MAX_DAYS };
 }
@@ -301,26 +300,33 @@ const noYear = (text) => text.replace(/\s*\b(19|20)\d\d\b/g, '');
 export function modernize(date) {
   if (!date || date.from || date.yearly) return date || null;
   const { precision, day, month, year } = date;
-  if (precision === 'monthDay') return { yearly: true, month, day, text: `${day} ${SHORT[month - 1]}` };
-  if (precision === 'day') return { from: iso(year, month, day), to: iso(year, month, day), text: `${day} ${SHORT[month - 1]} ${year}` };
-  if (precision === 'month') return { from: firstOf(year, month), to: lastOf(year, month), text: `${SHORT[month - 1]} ${year}` };
+  if (precision === 'monthDay') return { yearly: true, month, day, text: dayMonth(day, month) };
+  if (precision === 'day') return { from: iso(year, month, day), to: iso(year, month, day), text: `${dayMonth(day, month)} ${year}` };
+  if (precision === 'month') return { from: firstOf(year, month), to: lastOf(year, month), text: `${monthName(month)} ${year}` };
   return { from: firstOf(year, 1), to: lastOf(year, 12), text: String(year) };
 }
 
 // A date of a day and month without a year, in the saved form (used for birthdays shown as events).
 export function yearlyDate(month, day) {
-  return { yearly: true, month, day, text: `${day} ${SHORT[month - 1]}` };
+  return { yearly: true, month, day, text: dayMonth(day, month) };
 }
 
+// Dates are shown in the language in use: the text is made again from what was typed (or from the day and month),
+// so changing the language also changes how saved dates read. Dates typed as "today" and the like keep their saved text.
 export function formatDate(date) {
   const d = modernize(date);
-  return d ? d.text || '' : '';
+  if (!d) return '';
+  if (d.src && relativeDayOf(fold(d.src).trim()) === undefined) {
+    const parsed = parseDate(d.src);
+    if (!parsed.error && parsed.date) return parsed.date.text;
+  } else if (d.yearly && !d.endMonth && !d.src) return dayMonth(d.day, d.month);
+  return d.text || '';
 }
 
 // The text of a date in two short lines for a narrow column: ["14 Mar", "2024"].
 export function dateLines(date) {
   const text = formatDate(date);
-  const m = text.match(/^(.*[A-Za-z])\s+(\d{4})$/);
+  const m = text.match(/^(.*[\p{L}.])\s+(\d{4})$/u);
   return m ? [m[1], m[2]] : [text, ''];
 }
 
@@ -395,16 +401,16 @@ export function sortEvents(list, today = startOfToday()) {
 // "in 4 months", "tomorrow", "3 weeks ago" ...
 export function relative(ts, today = startOfToday()) {
   const days = Math.round((ts - today) / 86400000);
-  if (days === 0) return 'today';
-  if (days === 1) return 'tomorrow';
-  if (days === -1) return 'yesterday';
+  if (days === 0) return strings['rel.today'];
+  if (days === 1) return strings['rel.tomorrow'];
+  if (days === -1) return strings['rel.yesterday'];
   const n = Math.abs(days);
   let text;
-  if (n < 14) text = `${n} days`;
-  else if (n < 60) text = `${Math.round(n / 7)} weeks`;
-  else if (n < 730) text = `${Math.round(n / 30.44)} months`;
-  else text = `${Math.round(n / 365.25)} years`;
-  return days > 0 ? `in ${text}` : `${text} ago`;
+  if (n < 14) text = t('rel.days', { n });
+  else if (n < 60) text = t('rel.weeks', { n: Math.round(n / 7) });
+  else if (n < 730) text = t('rel.months', { n: Math.round(n / 30.44) });
+  else text = t('rel.years', { n: Math.round(n / 365.25) });
+  return t(days > 0 ? 'rel.in' : 'rel.ago', { text });
 }
 
 // The most recent past event that two people shared ("together"), or null.

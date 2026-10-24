@@ -20,22 +20,23 @@ import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
 import { displayName, filterByTag } from './contacts.js';
 import { confirmModal } from './modal.js';
+import { locale } from '../lang.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
 
 // The lists of entries on a contact. "labels" are the standard label options offered in the label menu.
 const GROUPS = [
-  { key: 'emails', heading: 'contact.emails', chip: 'contact.chipEmail', placeholder: 'contact.emailPlaceholder', inputType: 'email', labels: ['Personal', 'Work'] },
-  { key: 'phones', heading: 'contact.phones', chip: 'contact.chipPhone', placeholder: 'contact.phonePlaceholder', inputType: 'tel', labels: ['Mobile', 'Home', 'Work'] },
-  { key: 'addresses', heading: 'contact.addresses', chip: 'contact.chipAddress', placeholder: 'contact.addressPlaceholder', multiline: true, labels: ['Home', 'Work'] },
+  { key: 'emails', heading: 'contact.emails', chip: 'contact.chipEmail', placeholder: 'contact.emailPlaceholder', inputType: 'email', labels: [strings['label.personal'], strings['label.work']] },
+  { key: 'phones', heading: 'contact.phones', chip: 'contact.chipPhone', placeholder: 'contact.phonePlaceholder', inputType: 'tel', labels: [strings['label.mobile'], strings['label.home'], strings['label.work']] },
+  { key: 'addresses', heading: 'contact.addresses', chip: 'contact.chipAddress', placeholder: 'contact.addressPlaceholder', multiline: true, labels: [strings['label.home'], strings['label.work']] },
   { key: 'handles', heading: 'contact.handles', chip: 'contact.chipHandle', placeholder: 'contact.handlePlaceholder', inputType: 'text', labels: ['Instagram', 'Facebook', 'LinkedIn', 'Telegram', 'WhatsApp', 'Signal', 'X'] },
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
 const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', ...GROUPS.map((group) => group.key)];
-const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'short' }));
-const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }));
+const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'short' }));
+const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
 let contactId = null;
 let editing = false;
@@ -70,7 +71,7 @@ function goTo(hash) {
 // ---------- the read-only view ----------
 
 function formatBirthday(birthday) {
-  const text = `${birthday.day} ${MONTHS_LONG[birthday.month - 1]}`;
+  const text = t('dates.dayMonth', { d: birthday.day, m: MONTHS_LONG[birthday.month - 1] });
   return birthday.year ? `${text} ${birthday.year}` : text;
 }
 

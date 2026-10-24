@@ -8,6 +8,8 @@
 //     once locked by the password key, once locked by the recovery key.
 //   Changing the password only re-locks the master key. The data is not re-encrypted.
 
+import { strings } from './strings.js';
+
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -56,7 +58,7 @@ function base32ToBytes(text) {
   const out = [];
   for (const ch of text) {
     const index = CROCKFORD.indexOf(ch);
-    if (index < 0) throw new Error('The recovery key contains an invalid character.');
+    if (index < 0) throw new Error(strings['crypto.errChar']);
     value = (value << 5) | index;
     bits += 5;
     if (bits >= 8) {
@@ -120,7 +122,7 @@ function recoveryBytesFrom(recoveryKeyText) {
     .replace(/O/g, '0')
     .replace(/[IL]/g, '1');
   if (clean.length !== RECOVERY_KEY_LENGTH) {
-    throw new Error('A recovery key has 52 characters (13 groups of 4).');
+    throw new Error(strings['crypto.errLength']);
   }
   return base32ToBytes(clean);
 }
@@ -200,7 +202,7 @@ export async function unlockWithPassword(derived, wrappedKeyPassword) {
     const bytes = await open(derived.kek, wrappedKeyPassword, 'folkhold-v1 master-key');
     return await importAesKey(bytes, true);
   } catch {
-    throw new Error('Could not unlock: wrong password.');
+    throw new Error(strings['crypto.errPassword']);
   }
 }
 
@@ -212,7 +214,7 @@ export async function unlockWithRecoveryKey(recoveryKeyText, wrappedKeyRecovery)
     const bytes = await open(wrapKey, wrappedKeyRecovery, 'folkhold-v1 master-key');
     return await importAesKey(bytes, true);
   } catch {
-    throw new Error('Could not unlock: wrong recovery key.');
+    throw new Error(strings['crypto.errRecovery']);
   }
 }
 

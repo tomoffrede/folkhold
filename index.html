@@ -157,8 +157,13 @@
 </div>
 
 <div class="setting">
+<h3 class="group-title" data-text="settings.languageTitle"></h3>
+<select class="cond-select" id="language-select" data-label="lang.label"></select>
+</div>
+
+<div class="setting">
 <h3 class="group-title" data-text="settings.infoTitle"></h3>
-<nav class="legal-links settings-links" aria-label="Information">
+<nav class="legal-links settings-links" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
 <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
 <a href="#/privacy" data-text="legal.privacy"></a>
@@ -183,7 +188,7 @@
 </div>
 </section>
 
-<nav class="legal-links app-footer no-print" aria-label="Information">
+<nav class="legal-links app-footer no-print" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
 <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
 <a href="#/privacy" data-text="legal.privacy"></a>
@@ -191,7 +196,7 @@
 </nav>
 </main>
 
-<nav class="nav" aria-label="Main">
+<nav class="nav" data-label="nav.main">
 <a class="nav-item" href="#/home" data-nav="home">
 <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
 <span data-text="nav.home"></span>
@@ -224,6 +229,7 @@
 </dialog>
 <div class="auth" id="auth-root">
 <div class="auth-box">
+<div class="lang-row"><select class="cond-select" id="auth-lang" data-label="lang.label"></select></div>
 <div class="brand"><img class="brand-logo" src="icons/logo.svg" alt="" width="52" height="52"><h1 class="wordmark" data-text="app.name"></h1></div>
 
 <section data-auth="signin" hidden>
@@ -331,7 +337,7 @@
 <button type="button" class="btn btn-primary btn-form no-print" id="recovery-finish" disabled data-text="auth.recoveryFinish"></button>
 </section>
 
-<nav class="legal-links no-print" aria-label="Information">
+<nav class="legal-links no-print" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
 <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
 <a href="#/privacy" data-text="legal.privacy"></a>
@@ -345,7 +351,7 @@
 <div class="auth-box pages-box">
 <a class="link back" id="pages-back" href="#/home" data-text="pages.back"></a>
 <article id="page-content"></article>
-<nav class="legal-links no-print pages-links" aria-label="Information">
+<nav class="legal-links no-print pages-links" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
 <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
 <a href="#/privacy" data-text="legal.privacy"></a>

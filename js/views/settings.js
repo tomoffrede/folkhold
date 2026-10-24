@@ -6,6 +6,7 @@ import * as tags from '../tags.js';
 import * as auth from '../auth.js';
 import { downloadExport } from '../export.js';
 import { clearAllDrafts } from '../drafts.js';
+import { fillLangSelect, getLang, switchLang } from '../lang.js';
 import { confirmModal, closeOnOutsideClick } from './modal.js';
 
 const $ = (id) => document.getElementById(id);
@@ -222,7 +223,19 @@ function bindAccount() {
   });
 }
 
+// The language is saved in the account. A new device switches to it; an account without one saves the language in use.
+function syncLanguage() {
+  const saved = settings.get('language');
+  if (!saved) settings.set('language', getLang()).catch(() => {});
+  else if (saved !== getLang()) switchLang(saved);
+}
+
 export function initSettings() {
+  fillLangSelect($('language-select'), (code) => {
+    // Saved in the account first, then the page reloads in the new language.
+    settings.set('language', code).then(() => switchLang(code), (error) => showMessage(error.message));
+  });
+  document.addEventListener('folkhold:data', syncLanguage);
   bindAccount();
   document.addEventListener('folkhold:data', show);
   document.addEventListener('folkhold:saved', () => {

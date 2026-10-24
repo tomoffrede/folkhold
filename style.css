@@ -1939,3 +1939,10 @@ body.page-open #auth-root {
 .cond-wide .cond-select:nth-child(2) {
   flex: 0 0 auto;
 }
+
+/* Language pickers */
+.lang-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}

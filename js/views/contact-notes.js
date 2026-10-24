@@ -1,5 +1,6 @@
 // The "Notes" part of a contact's reading page, including the "Arrange" mode (up and down arrows).
 
+import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
@@ -15,7 +16,7 @@ function make(tag, className, text) {
 }
 
 function formatDate(time) {
-  return time ? new Date(time).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  return time ? new Date(time).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 }
 
 function cardContent(card, note, contact) {

@@ -3,6 +3,7 @@
 import { strings, t } from '../strings.js';
 import * as auth from '../auth.js';
 import { clearAllDrafts } from '../drafts.js';
+import { fillLangSelect, switchLang } from '../lang.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -217,6 +218,7 @@ function maybeShowWelcome() {
 export async function initAuth() {
   bindForms();
   bindWelcome();
+  fillLangSelect($('auth-lang'), switchLang);
   bindRecovery();
   try {
     route(await auth.startup());

@@ -7,6 +7,7 @@ import * as tags from '../tags.js';
 import { search } from '../search.js';
 import { formatDate } from '../dates.js';
 import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
+import { locale } from '../lang.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
@@ -65,7 +66,7 @@ function sortName(contact) {
   return displayName(contact);
 }
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }));
+const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
 function el(tag, className, text) {
   const node = document.createElement(tag);

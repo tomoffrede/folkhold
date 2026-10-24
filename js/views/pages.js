@@ -4,6 +4,8 @@
 import { strings } from '../strings.js';
 import { PAGES } from '../pages.js';
 import { PAGES_DE } from '../pages-de.js';
+import { ABOUT } from '../pages-about.js';
+import { getLang } from '../lang.js';
 import { OWNER, REPO_URL, LAST_UPDATED } from '../owner.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,7 +20,8 @@ function fill(text) {
   return text.replaceAll('{name}', OWNER.name).replaceAll('{email}', OWNER.email).replaceAll('{repo}', REPO_URL).replaceAll('{updated}', fill.german ? germanDate(LAST_UPDATED) : LAST_UPDATED);
 }
 
-// Privacy policy and Impressum exist in German and English. German for browsers set to German, English for everyone else, until the visitor picks one.
+// Privacy policy and Impressum exist in German and English only. German when the app is in German, English otherwise, until the visitor picks one.
+// About and Data privacy explained follow the app language (pages-about.js); English is the fallback.
 const LEGAL = ['privacy', 'impressum'];
 const MONTHS_DE = { January: 'Januar', February: 'Februar', March: 'März', April: 'April', May: 'Mai', June: 'Juni', July: 'Juli', August: 'August', September: 'September', October: 'Oktober', November: 'November', December: 'Dezember' };
 
@@ -29,7 +32,7 @@ function legalLang() {
   } catch (error) {
     // storage not available: fall back to the browser language
   }
-  return (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
+  return getLang() === 'de' ? 'de' : 'en';
 }
 
 function germanDate(text) {
@@ -39,7 +42,7 @@ function germanDate(text) {
 function render(key) {
   const german = LEGAL.includes(key) && legalLang() === 'de';
   fill.german = german;
-  const page = german ? PAGES_DE[key] : PAGES[key];
+  const page = german ? PAGES_DE[key] : (!LEGAL.includes(key) && ABOUT[getLang()] && ABOUT[getLang()][key]) || PAGES[key];
   const article = $('page-content');
   article.replaceChildren();
   if (LEGAL.includes(key)) {
@@ -64,7 +67,7 @@ function render(key) {
     });
     article.append(switcher);
   }
-  article.lang = german ? 'de' : 'en';
+  article.lang = LEGAL.includes(key) ? (german ? 'de' : 'en') : page === PAGES[key] ? 'en' : getLang();
   const title = document.createElement('h2');
   title.className = 'section-title';
   title.textContent = page.title;
