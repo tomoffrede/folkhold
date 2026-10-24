@@ -181,11 +181,46 @@ function bindRecovery() {
   });
 }
 
+// The welcome pop-up: opens by itself on the first visit, and again from the "What is Folkhold?" link.
+function bindWelcome() {
+  const dialog = $('welcome');
+  const seen = () => {
+    try {
+      localStorage.setItem('folkhold-welcome-seen', '1');
+    } catch {
+      // not saved: it will show again next time
+    }
+  };
+  const close = () => {
+    seen();
+    dialog.close();
+  };
+  $('welcome-close').addEventListener('click', close);
+  $('welcome-open').addEventListener('click', () => dialog.showModal());
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close(); // a click on the dimmed area outside the box
+  });
+  dialog.addEventListener('cancel', seen); // Escape key
+}
+
+function maybeShowWelcome() {
+  let seen = false;
+  try {
+    seen = localStorage.getItem('folkhold-welcome-seen') === '1';
+  } catch {
+    seen = false;
+  }
+  const dialog = $('welcome');
+  if (!seen && !$('auth-root').hidden && document.querySelector('[data-auth="signin"]:not([hidden])') && !dialog.open) dialog.showModal();
+}
+
 export async function initAuth() {
   bindForms();
+  bindWelcome();
   bindRecovery();
   try {
     route(await auth.startup());
+    maybeShowWelcome();
   } catch (error) {
     showSection('signin');
     setError('signin-error', error.message);

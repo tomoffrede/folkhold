@@ -23,7 +23,7 @@
 
 <section class="screen" data-screen="home" hidden>
 <header class="home-header">
-<h1 class="wordmark" data-text="app.name"></h1>
+<div class="brand"><img class="brand-logo" src="icons/logo.svg" alt="" width="44" height="44"><h1 class="wordmark" data-text="app.name"></h1></div>
 </header>
 
 <div class="home-actions">
@@ -199,9 +199,20 @@
 </nav>
 
 </div>
+<dialog class="welcome" id="welcome" aria-labelledby="welcome-title">
+<img class="welcome-logo" src="icons/logo.svg" alt="" width="72" height="72">
+<h2 id="welcome-title" data-text="welcome.title"></h2>
+<p class="welcome-lead" data-text="welcome.lead"></p>
+<ul class="welcome-list">
+<li data-text="welcome.point1"></li>
+<li data-text="welcome.point2"></li>
+<li data-text="welcome.point3"></li>
+</ul>
+<button type="button" class="btn btn-primary btn-form" id="welcome-close" data-text="welcome.go"></button>
+</dialog>
 <div class="auth" id="auth-root">
 <div class="auth-box">
-<h1 class="wordmark" data-text="app.name"></h1>
+<div class="brand"><img class="brand-logo" src="icons/logo.svg" alt="" width="52" height="52"><h1 class="wordmark" data-text="app.name"></h1></div>
 
 <section data-auth="signin" hidden>
 <h2 class="auth-title" data-text="auth.signInTitle"></h2>
@@ -219,6 +230,7 @@
 </form>
 <p class="auth-switch"><button type="button" class="link" data-auth-go="reset" data-text="auth.forgotLink"></button></p>
 <p class="auth-switch"><span data-text="auth.noAccount"></span> <button type="button" class="link" data-auth-go="signup" data-text="auth.createLink"></button></p>
+<p class="auth-switch"><button type="button" class="link" id="welcome-open" data-text="welcome.link"></button></p>
 </section>
 
 <section data-auth="reset" hidden>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Folkhold">
+  <defs>
+    <clipPath id="above-base"><rect x="0" y="0" width="512" height="400"/></clipPath>
+  </defs>
+  
+  <g transform="translate(0 6)">
+    <path d="M114 400 V256 A142 142 0 0 1 398 256 V400" fill="none" stroke="#2F5D50" stroke-width="28"/>
+    <circle cx="314" cy="265" r="32" fill="#D9946C"/>
+    <path d="M262 400 V366 A52 52 0 0 1 366 366 V400 Z" fill="#D9946C"/>
+    <!-- gap between the two figures, drawn in the surface colour -->
+    <path d="M148 400 V336 A64 64 0 0 1 276 336 V400 Z" fill="#FAF5EC" stroke="#FAF5EC" stroke-width="18" stroke-linejoin="round" clip-path="url(#above-base)"/>
+    <circle cx="212" cy="208" r="44" fill="#9C4424"/>
+    <path d="M148 400 V336 A64 64 0 0 1 276 336 V400 Z" fill="#9C4424"/>
+  </g>
+</svg>

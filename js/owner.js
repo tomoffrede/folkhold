@@ -7,4 +7,4 @@ export const OWNER = {
 };
 
 export const REPO_URL = 'github.com/tomoffrede/folkhold';
-export const LAST_UPDATED = '22 October 2026';
+export const LAST_UPDATED = '24 October 2026';
