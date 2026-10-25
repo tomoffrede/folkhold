@@ -2059,3 +2059,96 @@ body.page-open #auth-root {
 .rel-field:has(.rel-edit:not([hidden])) .rel-person {
   padding-right: var(--space-3);
 }
+
+/* Arrange (notes): a quiet link instead of a button */
+.link-small {
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+}
+
+/* Upcoming: space between the title and the range buttons */
+.screen[data-screen="upcoming"] > .section-title {
+  margin-bottom: var(--space-4);
+}
+
+/* Phones: centered title and logo, information links stay at the bottom of the page */
+@media (max-width: 799px) {
+  .home-header,
+  .auth-box > .brand {
+    justify-content: center;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .app-footer {
+    margin-top: auto;
+  }
+
+  .app-footer::before {
+    content: "";
+  }
+
+  .auth-box {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .auth-box > .legal-links {
+    margin-top: auto;
+    padding-top: var(--space-5);
+  }
+
+  .pages {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .pages-box {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+  }
+
+  .pages-box > .pages-links {
+    margin-top: auto;
+  }
+}
+
+/* Add to home screen */
+.a2hs-card {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-secondary);
+}
+
+.a2hs-card p {
+  margin: 0 0 var(--space-2);
+}
+
+.a2hs-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.a2hs-title {
+  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-heading);
+}
+
+.a2hs-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+}

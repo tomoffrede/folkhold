@@ -46,9 +46,9 @@ const monthShift = (y, m, step) => {
 
 // ---------- reading what was typed ----------
 
-// A two-digit year: up to this year's last two digits means 20xx ("24" is 2024), above it 19xx ("95" is 1995).
+// A two-digit year: 00-49 means 20xx ("27" is 2027), 50-99 means 19xx ("50" is 1950, "95" is 1995).
 function expandYear(n) {
-  return n + (n <= new Date().getFullYear() % 100 ? 2000 : 1900);
+  return n + (n < 50 ? 2000 : 1900);
 }
 
 function validYear(year) {

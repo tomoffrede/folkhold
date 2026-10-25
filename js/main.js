@@ -1,10 +1,12 @@
 // Startup and navigation. Screens are switched by the part of the address after "#".
 
+import { initNav } from './nav.js';
 import { strings } from './strings.js';
 import { initAuth } from './views/auth.js';
 import { initContacts } from './views/contacts.js';
 import { initContact } from './views/contact-page.js';
 import { initSettings } from './views/settings.js';
+import { initHomeScreen } from './views/homescreen.js';
 import { initNoteForm } from './views/item-form.js';
 import { initEventsPage } from './views/events-page.js';
 import { initUpcoming } from './views/upcoming.js';
@@ -62,6 +64,7 @@ function showScreen() {
   window.scrollTo(0, 0);
 }
 
+initNav();
 window.addEventListener('hashchange', showScreen);
 fillStrings();
 fillPlaceholders();
@@ -69,6 +72,7 @@ showScreen();
 initContacts();
 initContact();
 initSettings();
+initHomeScreen();
 initNoteForm();
 initEventsPage();
 initUpcoming();

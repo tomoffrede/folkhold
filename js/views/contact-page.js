@@ -2,6 +2,7 @@
 //   #/contact/<id>        the view
 //   #/contact/<id>/edit   the editor
 
+import { leave } from '../nav.js';
 import { strings, t } from '../strings.js';
 import * as settings from '../settings.js';
 import { collapsible } from './section.js';
@@ -69,6 +70,11 @@ function parseRoute() {
 
 function goTo(hash) {
   location.hash = hash;
+}
+
+// Leaves an editor or deleted page: back to the page before if that is the target, else replaces this page.
+function leaveTo(hash) {
+  leave(hash);
 }
 
 // ---------- the read-only view ----------
@@ -783,7 +789,7 @@ function continueQueue(id) {
 
 function leaveEditor() {
   const id = contactId;
-  goTo(isNew ? cameFrom : `#/contact/${id}`);
+  leaveTo(isNew ? cameFrom : `#/contact/${id}`);
   if (!isNew) continueQueue(id);
 }
 
@@ -889,7 +895,7 @@ async function saveNew(button) {
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
     for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
-    goTo(`#/contact/${newId}`);
+    leaveTo(`#/contact/${newId}`);
     if (createdContacts.length) askEditCreated(createdContacts);
     if (movedBirthday) showToast(t('birthday.saved', { name: displayName(fields), date: formatDate(movedBirthday.date) }));
   } catch (error) {
@@ -946,7 +952,7 @@ async function finish(button) {
   const ok = dirty ? await save() : await queue.then(() => !birthdayProblem && !$('contact-status').classList.contains('is-error'));
   button.disabled = false;
   if (ok && !birthdayProblem) {
-    goTo(`#/contact/${id}`);
+    leaveTo(`#/contact/${id}`);
     continueQueue(id);
   }
 }
@@ -962,7 +968,7 @@ async function deleteContact(button) {
     await notes.detachContact(id);
     await events.detachContact(id);
     await store.remove('contact', id);
-    goTo('#/contacts');
+    leaveTo('#/contacts');
   } catch (error) {
     setStatus(error.message, true);
     button.disabled = false;

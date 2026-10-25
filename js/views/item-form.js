@@ -4,6 +4,7 @@
 //   #/note/<id>/<contactId>, #/event/<id>/<contactId>   edit one, opened from that contact's page
 // Unsaved typing is kept as an encrypted draft on this device, so a reload does not lose it.
 
+import { leave } from '../nav.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as notes from '../notes.js';
@@ -81,7 +82,7 @@ async function moveBirthday(route, values, contact, existing) {
   if (existing) await events.removeEverywhere(existing);
   clearTimeout(draftTimer);
   clearDraft(draftName(route));
-  location.hash = `#/contact/${contact.id}`;
+  leave(`#/contact/${contact.id}`);
   showToast(t(`birthday.${result}`, { name: displayName(contact), date: formatDate(values.date) }));
   return true;
 }
@@ -124,7 +125,7 @@ function makeError() {
 function finish(route) {
   clearTimeout(draftTimer);
   clearDraft(draftName(route));
-  location.hash = backHref(route);
+  leave(backHref(route));
 }
 
 // The offer to bring back a draft: "Restore unsaved note" or "Discard".
@@ -200,7 +201,7 @@ function buildNew(page, route) {
       if (contactIds.length === 1 && (await moveBirthday(route, values, store.get('contact', contactIds[0]), null))) return;
       await kind.api.create({ ...kind.pick(values), contactIds });
       clearDraft(name);
-      location.hash = `#/contact/${preselected[0] || contactIds[0]}`;
+      leave(`#/contact/${preselected[0] || contactIds[0]}`);
     }),
   );
 

@@ -59,7 +59,7 @@ export function renderNotesSection(contact) {
     section.update({ count: list.length });
 
     if (list.length >= 2) {
-      const arrange = make('button', 'btn btn-secondary btn-small', strings[arranging ? 'notes.arrangeDone' : 'notes.arrange']);
+      const arrange = make('button', 'link link-small', strings[arranging ? 'notes.arrangeDone' : 'notes.arrange']);
       arrange.type = 'button';
       arrange.addEventListener('click', () => {
         arranging = !arranging;

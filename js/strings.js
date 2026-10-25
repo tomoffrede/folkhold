@@ -420,6 +420,22 @@ export const strings = {
   'rel.createdMany': 'You also created these contacts. Add their details now?',
   'rel.editName': 'Edit {name}',
   'rel.later': 'Later',
+  'settings.homeScreenTitle': "Add to home screen",
+  'a2hs.open': "How to add Folkhold to your home screen",
+  'a2hs.title': "Add Folkhold to your home screen",
+  'a2hs.intro': "It then opens like an app, with one tap.",
+  'a2hs.ios': "iPhone / iPad (Safari)",
+  'a2hs.ios1': "Tap the Share button (the square with an arrow) in Safari.",
+  'a2hs.ios2': "Scroll down and tap “Add to Home Screen”.",
+  'a2hs.ios3': "Tap “Add”.",
+  'a2hs.android': "Android (Chrome)",
+  'a2hs.and1': "Tap the ⋮ menu at the top right.",
+  'a2hs.and2': "Tap “Add to Home screen” (or “Install app”).",
+  'a2hs.and3': "Tap “Add” or “Install”.",
+  'a2hs.card': "Open Folkhold faster: add it to your home screen.",
+  'a2hs.show': "Show me how",
+  'a2hs.hide': "Hide",
+  'a2hs.close': "Close",
 };
 
 // Fills {placeholders} in a string, for example t('auth.recoveryAccount', { name: 'tom' }).
