@@ -69,7 +69,7 @@ function parseRoute() {
 let origin = null;
 
 function backHref(route) {
-  if (route.mode === 'edit' && origin) return origin;
+  if (origin && (route.mode === 'edit' || origin.endsWith('/edit'))) return origin; // also back to a contact's edit page
   return route.contactId ? `#/contact/${route.contactId}` : '#/home';
 }
 
@@ -201,7 +201,8 @@ function buildNew(page, route) {
       if (contactIds.length === 1 && (await moveBirthday(route, values, store.get('contact', contactIds[0]), null))) return;
       await kind.api.create({ ...kind.pick(values), contactIds });
       clearDraft(name);
-      leave(`#/contact/${preselected[0] || contactIds[0]}`);
+      const target = `#/contact/${preselected[0] || contactIds[0]}`;
+      leave(origin === `${target}/edit` ? origin : target); // from a contact's edit page: back to it
     }),
   );
 
@@ -417,7 +418,7 @@ export function initNoteForm() {
     // Remember Home or Upcoming as the page to go back to, when an event is opened from there.
     if (parseRoute()) {
       const before = (event.oldURL || '').split('#')[1] ? `#${event.oldURL.split('#')[1]}` : '';
-      if (before === '#/home' || before === '#/upcoming' || before === '#/contacts') origin = before;
+      if (before === '#/home' || before === '#/upcoming' || before === '#/contacts' || /^#\/contact\/[0-9a-f-]+\/edit$/i.test(before)) origin = before;
       else if (!/^#\/(add-)?(note|event)/.test(before)) origin = null;
     }
     render();

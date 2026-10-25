@@ -18,6 +18,7 @@ function usernameToEmail(name) {
 }
 
 export function validateUsername(raw) {
+  if (String(raw).includes('@')) return strings['auth.errUsernameEmail'];
   return /^[a-z0-9._-]{3,32}$/.test(vault.normalizeUsername(raw)) ? null : strings['auth.errUsername'];
 }
 
@@ -95,6 +96,7 @@ export async function signUp(rawUsername, password) {
 // Signs in and unlocks the data. If an earlier sign-up was never finished, it starts the key setup again.
 export async function signIn(rawUsername, password) {
   const name = vault.normalizeUsername(rawUsername);
+  if (String(rawUsername).includes('@')) throw new Error(strings['auth.errUsernameEmail']);
   if (!name || !password) throw new Error(strings['auth.errWrong']);
 
   const derived = await vault.deriveFromPassword(name, password);

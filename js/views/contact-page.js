@@ -227,14 +227,21 @@ function closeMenus() {
   document.querySelectorAll('.label-toggle[aria-expanded="true"]').forEach((button) => button.setAttribute('aria-expanded', 'false'));
 }
 
-function toggleMenu(button) {
-  const box = button.closest('.label-box');
-  const wasOpen = Boolean(box.querySelector('.label-menu'));
+const foldText = (text) =>
+  String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+
+// Shows the label menu of a label box. With `typed`, only the labels that contain the typed text are listed.
+function openMenu(box, typed = '') {
   closeMenus();
-  if (wasOpen) return;
   const group = [...GROUPS, RELATION_GROUP].find((g) => g.key === box.dataset.group);
+  const wanted = foldText(typed.trim());
+  const options = labelOptions(group).filter((text) => !wanted || foldText(text).includes(wanted));
+  if (!options.length || (wanted && options.length === 1 && foldText(options[0]) === wanted)) return;
   const menu = make('ul', 'label-menu');
-  labelOptions(group).forEach((text) => {
+  options.forEach((text) => {
     const item = make('li');
     const option = make('button', 'label-option', text);
     option.type = 'button';
@@ -243,7 +250,14 @@ function toggleMenu(button) {
     menu.append(item);
   });
   box.append(menu);
-  button.setAttribute('aria-expanded', 'true');
+  box.querySelector('.label-toggle').setAttribute('aria-expanded', 'true');
+}
+
+function toggleMenu(button) {
+  const box = button.closest('.label-box');
+  const wasOpen = Boolean(box.querySelector('.label-menu'));
+  if (wasOpen) closeMenus();
+  else openMenu(box);
 }
 
 function pickLabel(option) {
@@ -447,7 +461,7 @@ function renderEditor(page, contact) {
   relationChip.append(personIcon(2), strings['contact.chipRelation']);
   if (hiddenFields.includes('relations')) relationChip.dataset.off = '1';
   relationRowChips.append(relationChip);
-  if (isNew) {
+  {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
     noteChip.dataset.add = 'note';
@@ -673,6 +687,10 @@ function addEntry(key) {
     block.hidden = false;
     page.querySelector('[data-add="met"]').hidden = true;
     block.querySelector('[data-part="met"]').focus();
+    return;
+  }
+  if ((key === 'note' || key === 'event') && !isNew) {
+    goTo(`#/add-${key}/${contactId}`); // an existing contact: the full note or event form (typing here is saved first)
     return;
   }
   if (key === 'note') {
@@ -1018,6 +1036,11 @@ function bindPage() {
     else if (button.dataset.act === 'remove-birthday') removeBirthday();
     else if (button.dataset.act === 'remove-met') removeMet();
     else if (button.dataset.act === 'delete') askDelete(button);
+  });
+
+  // Typing in a label field lists the labels that match what was typed.
+  page.addEventListener('input', (event) => {
+    if (event.target.classList.contains('entry-label')) openMenu(event.target.closest('.label-box'), event.target.value);
   });
 
   // A tap anywhere else, or Escape, closes an open label menu.
