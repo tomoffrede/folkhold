@@ -418,4 +418,10 @@ export default {
   'rel.makeContact': 'Criar contato',
   'settings.field.relations': 'Relações',
   'filter.field.relations': 'relação',
+
+  'rel.editDetails': 'Editar dados',
+  'rel.createdOne': 'Você também criou {name} como contato. Adicionar os detalhes agora?',
+  'rel.createdMany': 'Você também criou estes contatos. Adicionar os detalhes agora?',
+  'rel.editName': 'Editar {name}',
+  'rel.later': 'Depois',
 };

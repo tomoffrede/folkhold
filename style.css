@@ -2026,3 +2026,36 @@ body.page-open #auth-root {
   margin-left: var(--space-3);
   font-size: 0.9rem;
 }
+
+.rel-edit {
+  position: absolute;
+  top: 17px;
+  right: 52px;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.rel-edit:not([hidden]) ~ .rel-person,
+.rel-field:has(.rel-edit:not([hidden])) .rel-person {
+  padding-right: 110px;
+}
+
+/* The badge and the "Edit details" link sit under the person's name, so a long name is never covered */
+.rel-badge,
+.rel-edit {
+  position: static;
+  display: inline-block;
+  margin: 4px 4px 0;
+}
+
+.rel-badge[hidden],
+.rel-edit[hidden] {
+  display: none;
+}
+
+.rel-entry[data-state='create'] .rel-person,
+.rel-field:has(.rel-edit:not([hidden])) .rel-person {
+  padding-right: var(--space-3);
+}

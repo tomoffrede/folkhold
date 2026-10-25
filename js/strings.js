@@ -414,6 +414,12 @@ export const strings = {
   'rel.makeContact': 'Make contact',
   'settings.field.relations': 'Relationships',
   'filter.field.relations': 'relationship',
+
+  'rel.editDetails': 'Edit details',
+  'rel.createdOne': 'You also created {name} as a contact. Add their details now?',
+  'rel.createdMany': 'You also created these contacts. Add their details now?',
+  'rel.editName': 'Edit {name}',
+  'rel.later': 'Later',
 };
 
 // Fills {placeholders} in a string, for example t('auth.recoveryAccount', { name: 'tom' }).

@@ -106,17 +106,21 @@ export async function makeContact(ownerId, relId) {
 }
 
 // New-contact form: relationships marked "create" get their contact now, so the saved list only has ids and names.
+// Returns { list, created: [{ id, name }] }.
 export async function materialize(list) {
   const result = [];
+  const created = [];
   for (const rel of list || []) {
     if (!rel.create) {
       result.push(rel);
       continue;
     }
     const { create, name, ...rest } = rel;
-    result.push({ ...rest, contactId: await createContact(name) });
+    const contactId = await createContact(name);
+    created.push({ id: contactId, name });
+    result.push({ ...rest, contactId });
   }
-  return result;
+  return { list: result, created };
 }
 
 // A contact is about to be deleted: relationships to them stay, as plain names.

@@ -56,6 +56,7 @@ function setPerson(row, state, text, contactId) {
   else delete row.dataset.contactId;
   person.value = text;
   row.querySelector('.rel-badge').hidden = state !== 'create';
+  row.querySelector('.rel-edit').hidden = true;
   closeMenu(row);
 }
 
@@ -75,6 +76,9 @@ function choose(row, choice, defer) {
     relations.createContact(choice.name).then((id) => {
       if (row.isConnected && row.querySelector('.rel-person').value === choice.name) {
         setPerson(row, 'contact', choice.name, id);
+        const edit = row.querySelector('.rel-edit'); // the new contact can be opened right away
+        edit.href = `#/contact/${id}/edit`;
+        edit.hidden = false;
         announce(row);
       }
     });
@@ -120,7 +124,9 @@ function personField(row, entry, selfId, defer) {
   person.setAttribute('aria-label', strings['rel.personPlaceholder']);
   const badge = make('span', 'rel-badge', strings['rel.newBadge']);
   badge.hidden = true;
-  field.append(person, badge);
+  const edit = make('a', 'rel-edit', strings['rel.editDetails']);
+  edit.hidden = true;
+  field.append(person, badge, edit);
   row.append(field);
 
   const target = entry.contactId ? store.get('contact', entry.contactId) : null;
@@ -136,6 +142,7 @@ function personField(row, entry, selfId, defer) {
     delete row.dataset.state;
     delete row.dataset.contactId;
     badge.hidden = true;
+    edit.hidden = true;
     showMenu(row, selfId, defer);
   });
   person.addEventListener('focus', () => {

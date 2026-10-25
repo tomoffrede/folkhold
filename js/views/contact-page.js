@@ -19,7 +19,7 @@ import { renderNotesSection } from './contact-notes.js';
 import { createNoteFields } from './note-fields.js';
 import * as rich from '../richtext.js';
 import { displayName, filterByTag } from './contacts.js';
-import { confirmModal } from './modal.js';
+import { confirmModal, openModal } from './modal.js';
 import { locale } from '../lang.js';
 import * as relations from '../relations.js';
 import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection } from './relation-rows.js';
@@ -805,6 +805,30 @@ function showNewError(message) {
   if (message) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+let createdContacts = []; // contacts made from the relationship field of the new-contact form
+
+// "Add their details now?": one button for each contact that was made along the way.
+function askEditCreated(list) {
+  const panel = make('div', 'modal-panel');
+  panel.append(make('p', 'modal-text', list.length === 1 ? t('rel.createdOne', { name: list[0].name }) : strings['rel.createdMany']));
+  const actions = make('div', 'modal-actions');
+  const dialog = openModal(panel);
+  list.forEach((item) => {
+    const edit = make('button', 'btn btn-primary btn-small', t('rel.editName', { name: item.name }));
+    edit.type = 'button';
+    edit.addEventListener('click', () => {
+      dialog.close();
+      goTo(`#/contact/${item.id}/edit`);
+    });
+    actions.append(edit);
+  });
+  const later = make('button', 'btn btn-secondary btn-small', strings['rel.later']);
+  later.type = 'button';
+  later.addEventListener('click', () => dialog.close());
+  actions.append(later);
+  panel.append(actions);
+}
+
 async function saveNew(button) {
   showNewError('');
   const { fields, problem } = readFields();
@@ -838,13 +862,18 @@ async function saveNew(button) {
     if (!newId) {
       await tagInput.resolve();
       if (tagInput.ids().length) fields.tagIds = tagInput.ids();
-      if (fields.relations) fields.relations = await relations.materialize(fields.relations);
+      if (fields.relations) {
+        const made = await relations.materialize(fields.relations);
+        fields.relations = made.list;
+        createdContacts = made.created;
+      }
       newId = await store.add('contact', fields);
     }
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
     for (const n of list) await notes.create({ ...n, contactIds: [newId] });
     for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
     goTo(`#/contact/${newId}`);
+    if (createdContacts.length) askEditCreated(createdContacts);
     if (movedBirthday) showToast(t('birthday.saved', { name: displayName(fields), date: formatDate(movedBirthday.date) }));
   } catch (error) {
     showNewError(error.message);
