@@ -6,9 +6,10 @@
 
 import * as notes from './notes.js';
 import * as events from './events.js';
+import * as relations from './relations.js';
 import { lastTogether, startOfToday } from './dates.js';
 
-export const HAS_FIELDS = ['birthday', 'emails', 'phones', 'addresses', 'handles', 'met', 'notes', 'events', 'tags', 'important'];
+export const HAS_FIELDS = ['birthday', 'emails', 'phones', 'addresses', 'handles', 'met', 'notes', 'events', 'tags', 'important', 'relations'];
 export const LAST_MET_MONTHS = [3, 6, 12];
 
 function has(contact, field) {
@@ -23,6 +24,8 @@ function has(contact, field) {
       return notes.listFor(contact.id).length > 0;
     case 'events':
       return events.listFor(contact.id).length > 0;
+    case 'relations':
+      return relations.hasAny(contact);
     case 'important':
       return notes.listFor(contact.id).some((note) => note.priority === 1);
     default:

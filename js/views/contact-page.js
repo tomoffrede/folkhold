@@ -21,6 +21,9 @@ import * as rich from '../richtext.js';
 import { displayName, filterByTag } from './contacts.js';
 import { confirmModal } from './modal.js';
 import { locale } from '../lang.js';
+import * as relations from '../relations.js';
+import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection } from './relation-rows.js';
+import { personIcon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -34,7 +37,7 @@ const GROUPS = [
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
-const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', ...GROUPS.map((group) => group.key)];
+const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'relations', ...GROUPS.map((group) => group.key)];
 const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'short' }));
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
@@ -156,6 +159,8 @@ function renderView(page, contact) {
   if (!previewParts.length) details.bodyEl.append(make('p', 'empty', strings['contact.nothingYet']));
   details.update({ preview: previewParts.length ? previewParts.join(' · ') : strings['contact.nothingYet'] });
   page.append(details);
+  const relationsSection = renderRelationsSection(contact, render);
+  if (relationsSection) page.append(relationsSection);
   page.append(renderEventsSection(contact), renderNotesSection(contact));
 }
 
@@ -221,7 +226,7 @@ function toggleMenu(button) {
   const wasOpen = Boolean(box.querySelector('.label-menu'));
   closeMenus();
   if (wasOpen) return;
-  const group = GROUPS.find((g) => g.key === box.dataset.group);
+  const group = [...GROUPS, RELATION_GROUP].find((g) => g.key === box.dataset.group);
   const menu = make('ul', 'label-menu');
   labelOptions(group).forEach((text) => {
     const item = make('li');
@@ -429,6 +434,13 @@ function renderEditor(page, contact) {
   metChip.hidden = Boolean(contact.met);
   if (hiddenFields.includes('met')) metChip.dataset.off = '1';
   chips.append(metChip);
+  const relationRowChips = make('div', 'chips chips-relation');
+  const relationChip = make('button', 'chip chip-relation');
+  relationChip.type = 'button';
+  relationChip.dataset.add = 'relations';
+  relationChip.append(personIcon(2), strings['contact.chipRelation']);
+  if (hiddenFields.includes('relations')) relationChip.dataset.off = '1';
+  relationRowChips.append(relationChip);
   if (isNew) {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
@@ -449,13 +461,13 @@ function renderEditor(page, contact) {
 
   page.append(head, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
-  page.append(birthdayBlock(contact.birthday), metBlock(contact.met));
+  page.append(birthdayBlock(contact.birthday), metBlock(contact.met), relationBlock(contact, isNew));
   if (isNew) {
     const pending = make('div', 'pending-notes');
     pending.id = 'pending-notes';
     page.append(pending);
   }
-  page.append(chips);
+  page.append(chips, relationRowChips);
   if (noteRow) page.append(noteRow);
   if (isNew) {
     const problem = make('p', 'form-error');
@@ -565,6 +577,9 @@ function readFields() {
     if (entries.length) fields[group.key] = entries;
   });
 
+  const relationList = readRelations(page);
+  if (relationList.length) fields.relations = relationList;
+
   if (tagInput && tagInput.ids().length) fields.tagIds = tagInput.ids();
 
   let problem = null; // the text key of what could not be saved, if anything
@@ -660,6 +675,14 @@ function addEntry(key) {
   }
   if (key === 'event') {
     addPendingEvent();
+    return;
+  }
+  if (key === 'relations') {
+    const block = page.querySelector('[data-group="relations"]');
+    const row = relationRow({}, contactId, isNew);
+    block.hidden = false;
+    block.querySelector('.entries').append(row);
+    toggleMenu(row.querySelector('.label-toggle')); // the relationship choices open at once
     return;
   }
   const group = GROUPS.find((g) => g.key === key);
@@ -815,6 +838,7 @@ async function saveNew(button) {
     if (!newId) {
       await tagInput.resolve();
       if (tagInput.ids().length) fields.tagIds = tagInput.ids();
+      if (fields.relations) fields.relations = await relations.materialize(fields.relations);
       newId = await store.add('contact', fields);
     }
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
@@ -831,8 +855,14 @@ async function saveNew(button) {
 function removeEntry(button) {
   const row = button.closest('.entry');
   const block = row.closest('.group');
+  const owner = row.classList.contains('rel-inbound') ? { id: row.dataset.owner, relId: row.dataset.relId } : null;
   row.remove();
   if (!block.querySelector('.entry')) block.hidden = true;
+  if (owner) {
+    // Saved on the other contact: removed there, at once.
+    relations.removeFrom(owner.id, owner.relId).catch((error) => setStatus(error.message, true));
+    return;
+  }
   dirty = true;
   save();
 }
@@ -879,6 +909,7 @@ async function deleteContact(button) {
   dirty = false;
   try {
     await queue;
+    await relations.detachContact(store.get('contact', id));
     await notes.detachContact(id);
     await events.detachContact(id);
     await store.remove('contact', id);
@@ -936,7 +967,7 @@ function bindPage() {
 
   // A tap anywhere else, or Escape, closes an open label menu.
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('.label-box')) closeMenus();
+    if (!event.target.closest('.label-box, .rel-field, .chip-relation')) closeMenus();
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeMenus();

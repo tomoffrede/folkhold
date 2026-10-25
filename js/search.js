@@ -3,7 +3,7 @@
 import * as store from './store.js';
 import * as tags from './tags.js';
 
-const SKIP = new Set(['id', 'tagIds', 'noteOrder', 'contactIds', 'priority', 'repeat', 'kind', 'src', 'createdAt', 'updatedAt']);
+const SKIP = new Set(['id', 'tagIds', 'noteOrder', 'contactIds', 'priority', 'repeat', 'kind', 'src', 'createdAt', 'updatedAt', 'contactId']);
 
 export const fold = (text) =>
   String(text || '')

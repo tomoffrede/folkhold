@@ -395,6 +395,25 @@ export const strings = {
   'crypto.errLength': 'A recovery key has 52 characters (13 groups of 4).',
   'crypto.errPassword': 'Could not unlock: wrong password.',
   'crypto.errRecovery': 'Could not unlock: wrong recovery key.',
+
+  'contact.chipRelation': '+ Relationship',
+  'contact.relations': 'Relationships',
+  'rel.partner': 'Partner',
+  'rel.friend': 'Friend',
+  'rel.bestFriend': 'Best friend',
+  'rel.parent': 'Parent',
+  'rel.child': 'Child',
+  'rel.sibling': 'Sibling',
+  'rel.colleague': 'Colleague',
+  'rel.ex': 'Ex',
+  'rel.labelPlaceholder': 'Relationship',
+  'rel.personPlaceholder': 'Who?',
+  'rel.justName': '“{name}” (just a name)',
+  'rel.create': 'Create contact “{name}”',
+  'rel.newBadge': 'new contact',
+  'rel.makeContact': 'Make contact',
+  'settings.field.relations': 'Relationships',
+  'filter.field.relations': 'relationship',
 };
 
 // Fills {placeholders} in a string, for example t('auth.recoveryAccount', { name: 'tom' }).

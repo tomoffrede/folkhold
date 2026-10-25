@@ -1946,3 +1946,83 @@ body.page-open #auth-root {
   justify-content: flex-end;
   margin-bottom: var(--space-3);
 }
+
+/* Relationships */
+.chips-relation {
+  margin-top: var(--space-2);
+}
+
+.chip-relation {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--color-field-border);
+  background: transparent;
+}
+
+.chip-relation .who-icon {
+  height: 14px;
+  margin-right: 0;
+  opacity: 1;
+}
+
+.rel-entry {
+  position: relative;
+}
+
+.rel-field {
+  min-width: 0;
+}
+
+.rel-badge {
+  position: absolute;
+  top: 16px;
+  right: 52px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.rel-entry[data-state='create'] .rel-person {
+  padding-right: 96px;
+}
+
+.rel-menu {
+  left: 0;
+  right: 0;
+  top: 56px;
+}
+
+.rel-menu .label-option {
+  height: auto;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  white-space: normal;
+}
+
+.rel-menu .rel-just,
+.rel-menu .rel-create {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.rel-static {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.rel-static-label {
+  color: var(--color-muted);
+}
+
+.rel-make {
+  margin-left: var(--space-3);
+  font-size: 0.9rem;
+}
