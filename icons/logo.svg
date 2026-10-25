@@ -1,15 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Folkhold">
-  <defs>
-    <clipPath id="above-base"><rect x="0" y="0" width="512" height="400"/></clipPath>
-  </defs>
-  
-  <g transform="translate(0 6)">
-    <path d="M114 400 V256 A142 142 0 0 1 398 256 V400" fill="none" stroke="#2F5D50" stroke-width="28"/>
-    <circle cx="314" cy="265" r="32" fill="#D9946C"/>
-    <path d="M262 400 V366 A52 52 0 0 1 366 366 V400 Z" fill="#D9946C"/>
-    <!-- gap between the two figures, drawn in the surface colour -->
-    <path d="M148 400 V336 A64 64 0 0 1 276 336 V400 Z" fill="#FAF5EC" stroke="#FAF5EC" stroke-width="18" stroke-linejoin="round" clip-path="url(#above-base)"/>
-    <circle cx="212" cy="208" r="44" fill="#9C4424"/>
-    <path d="M148 400 V336 A64 64 0 0 1 276 336 V400 Z" fill="#9C4424"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 9.5 84 84" role="img" aria-label="Folkhold"><path d="M24 90Q24 62 40 54.5A21 21 0 1 1 60 54.5Q76 62 76 90" fill="none" stroke="#2F5D50" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(50 36) scale(.58) translate(-50 -34)"><path d="M48.5 15C41 11 31 13 28.5 22C22 25 22 35 26.5 39C25 47 32 55 40.5 52.5C44 55 47.5 53.5 48.5 50Z" transform="translate(-1 0)" fill="#2F5D50"/><path d="M48.5 15C41 11 31 13 28.5 22C22 25 22 35 26.5 39C25 47 32 55 40.5 52.5C44 55 47.5 53.5 48.5 50Z" transform="translate(101 0) scale(-1 1)" fill="#2F5D50"/></g></svg>
