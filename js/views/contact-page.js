@@ -774,8 +774,17 @@ async function discard(button) {
   if (yes) discardYes(button);
 }
 
+// After editing a contact that was made from a relationship field: offer the next one, until none is left.
+function continueQueue(id) {
+  if (queueEditing !== id) return;
+  queueEditing = null;
+  if (pendingDetails.length) askEditCreated(pendingDetails);
+}
+
 function leaveEditor() {
-  goTo(isNew ? cameFrom : `#/contact/${contactId}`);
+  const id = contactId;
+  goTo(isNew ? cameFrom : `#/contact/${id}`);
+  if (!isNew) continueQueue(id);
 }
 
 // "Yes, discard": put the contact back as it was when the editor opened.
@@ -806,9 +815,12 @@ function showNewError(message) {
 }
 
 let createdContacts = []; // contacts made from the relationship field of the new-contact form
+let pendingDetails = []; // of those, the ones whose details have not been offered yet
+let queueEditing = null; // the contact being edited because of the pop-up
 
 // "Add their details now?": one button for each contact that was made along the way.
 function askEditCreated(list) {
+  pendingDetails = list.slice();
   const panel = make('div', 'modal-panel');
   panel.append(make('p', 'modal-text', list.length === 1 ? t('rel.createdOne', { name: list[0].name }) : strings['rel.createdMany']));
   const actions = make('div', 'modal-actions');
@@ -817,6 +829,8 @@ function askEditCreated(list) {
     const edit = make('button', 'btn btn-primary btn-small', t('rel.editName', { name: item.name }));
     edit.type = 'button';
     edit.addEventListener('click', () => {
+      pendingDetails = pendingDetails.filter((other) => other.id !== item.id);
+      queueEditing = item.id;
       dialog.close();
       goTo(`#/contact/${item.id}/edit`);
     });
@@ -824,7 +838,10 @@ function askEditCreated(list) {
   });
   const later = make('button', 'btn btn-secondary btn-small', strings['rel.later']);
   later.type = 'button';
-  later.addEventListener('click', () => dialog.close());
+  later.addEventListener('click', () => {
+    pendingDetails = [];
+    dialog.close();
+  });
   actions.append(later);
   panel.append(actions);
 }
@@ -928,7 +945,10 @@ async function finish(button) {
   clearTimeout(timer);
   const ok = dirty ? await save() : await queue.then(() => !birthdayProblem && !$('contact-status').classList.contains('is-error'));
   button.disabled = false;
-  if (ok && !birthdayProblem) goTo(`#/contact/${id}`);
+  if (ok && !birthdayProblem) {
+    goTo(`#/contact/${id}`);
+    continueQueue(id);
+  }
 }
 
 async function deleteContact(button) {
