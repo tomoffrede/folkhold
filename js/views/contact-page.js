@@ -163,7 +163,7 @@ function renderView(page, contact) {
     details.bodyEl.append(block);
   });
   if (!previewParts.length) details.bodyEl.append(make('p', 'empty', strings['contact.nothingYet']));
-  details.update({ preview: previewParts.length ? previewParts.join(' · ') : strings['contact.nothingYet'] });
+  details.update({ preview: previewParts.join(' · ') }); // nothing to preview: the "no details yet" text shows only when opened
   page.append(details);
   const relationsSection = renderRelationsSection(contact, render);
   if (relationsSection) page.append(relationsSection);
