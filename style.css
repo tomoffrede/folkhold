@@ -2152,3 +2152,14 @@ body.page-open #auth-root {
   margin: 0;
   padding-left: var(--space-5);
 }
+
+/* A contact's name in the note/event forms: a link to the contact's page */
+.chip-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hint .info-link {
+  font-weight: 600;
+}

@@ -155,6 +155,21 @@ function draftBanner(route, restore) {
   });
 }
 
+// A hint line whose "\u0000" is replaced by the contacts' names, each one a link to that contact's page.
+function linkedLine(template, contacts) {
+  const line = make('p', 'hint');
+  const [before, after = ''] = template.split('\u0000');
+  line.append(before);
+  contacts.forEach((contact, index) => {
+    if (index) line.append(', ');
+    const link = make('a', 'info-link', displayName(contact));
+    link.href = `#/contact/${contact.id}`;
+    line.append(link);
+  });
+  line.append(after);
+  return line;
+}
+
 // ---------- a new note or event ----------
 
 function buildNew(page, route) {
@@ -247,10 +262,8 @@ function buildEdit(page, route, note, contact) {
   const formWrap = make('div', 'form');
   const slot = make('div');
   slot.id = 'draft-slot';
-  formWrap.append(slot, make('p', 'hint', T(route.kind, 'forLine', { name: displayName(contact) })));
-  if (others.length) {
-    formWrap.append(make('p', 'hint', t('notes.alsoOn', { names: others.map(displayName).join(', ') })));
-  }
+  formWrap.append(slot, linkedLine(T(route.kind, 'forLine', { name: '\u0000' }), [contact]));
+  if (others.length) formWrap.append(linkedLine(t('notes.alsoOn', { names: '\u0000' }), others));
   const promptWrap = make('div');
   promptWrap.hidden = true;
   formWrap.append(fields.element, error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));

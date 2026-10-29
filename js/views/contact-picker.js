@@ -48,7 +48,9 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
     chips.replaceChildren();
     ids.forEach((id) => {
       const chip = make('span', 'chip-contact');
-      chip.append(make('span', '', nameOf(id)));
+      const name = make('a', 'chip-link', nameOf(id)); // opens the contact's page
+      name.href = `#/contact/${id}`;
+      chip.append(name);
       if (id !== locked) {
         const remove = make('button', 'chip-remove', '×');
         remove.type = 'button';
