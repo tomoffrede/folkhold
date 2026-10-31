@@ -901,6 +901,7 @@ async function saveNew(button) {
   setStatus(strings['contact.saving']);
   try {
     if (!newId) {
+      createdContacts = []; // only the contacts made by this form (not left over from an earlier one)
       await tagInput.resolve();
       if (tagInput.ids().length) fields.tagIds = tagInput.ids();
       if (fields.relations) {

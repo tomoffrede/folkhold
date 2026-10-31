@@ -150,6 +150,12 @@ function parseSingle(raw) {
   return year ? describe({ kind: 'month', y: year, m: month, part }) : { error: 'needYear' };
 }
 
+// Adds a year to a date that has none: "20.10" becomes "20.10.2026", "20 oct" becomes "20 oct 2026".
+function withYear(text, year) {
+  const numeric = text.match(/^(\d{1,2})([./-])(\d{1,2})\.?$/);
+  return numeric ? `${numeric[1]}${numeric[2]}${numeric[3]}${numeric[2]}${year}` : `${text} ${year}`;
+}
+
 // "~" or a word like "around" in front makes a date approximate.
 function stripApprox(text) {
   const m = text.trim().match(new RegExp(`^${APPROX}\\s*(.*)$`, 'i'));
@@ -216,10 +222,18 @@ export function parseDate(input) {
   }
   const toRegex = new RegExp(`-|\\b${TO_WORDS}\\b`);
   if (single.error && toRegex.test(text)) {
-    const cut = text.split(new RegExp(`\\s*(?:-|\\b${TO_WORDS}\\b)\\s*`));
+    // A hyphen with spaces around it (or a word like "to") is the safest place to cut: "2026-10-20 - 2026-11-17".
+    let cut = text.split(new RegExp(`\\s+-\\s+|\\s*\\b${TO_WORDS}\\b\\s*`));
+    if (cut.length !== 2) cut = text.split(new RegExp(`\\s*(?:-|\\b${TO_WORDS}\\b)\\s*`));
     // "14-16 march": the first half is only a day.
     const lead = cut.length === 2 && /^\d{1,2}$/.test(cut[0]) && cut[1].match(/^\d{1,2}\s+(.+)$/);
     if (lead) cut[0] = `${cut[0]} ${lead[1]}`;
+    // "7.-17.11.2026" and "7/-17/11/2026": the first half is only a day, the month comes from the right half.
+    const numLead = cut.length === 2 && /^\d{1,2}$/.test(cut[0]) && cut[1].match(/^\d{1,2}([./])(\d{1,2})(.*)$/);
+    if (numLead) cut[0] = `${cut[0]}${numLead[1]}${numLead[2]}${numLead[3]}`;
+    // "Nov 7 - 17, 2026" and "November 7-17": the right half is only a day (and maybe the year), the month comes from the left.
+    const dayOnly = cut.length === 2 && /^[a-z]+\.?\s*\d{1,2}$/.test(cut[0]) && cut[1].match(/^(\d{1,2})(?:[\s,]+(\d{4}))?$/);
+    if (dayOnly) cut[1] = `${cut[0].replace(/\d{1,2}$/, dayOnly[1])}${dayOnly[2] ? ` ${dayOnly[2]}` : ''}`;
     // A short year on the right half: "2019-21" and "june-august 22".
     if (cut.length === 2 && /^\d{2}$/.test(cut[1]) && /^\d{4}$/.test(cut[0])) cut[1] = String(Math.floor(+cut[0] / 100) * 100 + +cut[1]);
     const short = cut.length === 2 && cut[1].match(/^([a-z]+)\s+(\d{2})$/);
@@ -230,11 +244,12 @@ export function parseDate(input) {
       const bare = (d) => d.error === 'needYear' || d.kind === 'yearly';
       if (bare(left) && bare(right)) {
         // No year on either side ("june-august", "14-16 march", "november-february"): every year.
-        left = parseSingle(`${cut[0]} ${DUMMY_YEAR}`);
-        right = parseSingle(`${cut[1]} ${DUMMY_YEAR}`);
-        if (!left.error && !right.error && left.from > right.to) right = parseSingle(`${cut[1]} ${DUMMY_YEAR + 1}`);
+        left = parseSingle(withYear(cut[0], DUMMY_YEAR));
+        right = parseSingle(withYear(cut[1], DUMMY_YEAR));
+        if (!left.error && !right.error && left.from > right.to) right = parseSingle(withYear(cut[1], DUMMY_YEAR + 1));
         yearless = true;
-      } else if (left.error === 'needYear' && right.y) left = parseSingle(`${cut[0]} ${right.y}`);
+      } else if (bare(left) && right.y) left = parseSingle(withYear(cut[0], right.y)); // "20 oct - 17 nov 2026": the year belongs to both
+      else if (bare(right) && left.y) right = parseSingle(withYear(cut[1], left.y)); // "20 oct 2026 - 17 nov"
       if (!left.error && !right.error && left.from && right.from) {
         if (left.from <= right.to) range = { left, right };
         else return { error: 'invalid' };
