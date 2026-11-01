@@ -442,4 +442,5 @@ export default {
   "a2hs.show": "Montrez-moi comment",
   "a2hs.hide": "Masquer",
   "a2hs.close": "Fermer",
+  'data.errConflict': "Cet élément a été modifié entre-temps sur un autre appareil. La dernière version est chargée : vérifie-la et réessaie.",
 };

@@ -32,15 +32,8 @@ export function eventRow(event, contact, { showYear = true } = {}) {
   } else if (!showYear) second = '';
 
   const row = make('a', `ev-row ${coming ? 'up' : 'past'}`);
-  row.href = event.virtual ? `#/contact/${contact.id}` : `#/event/${event.id}/${contact.id}`;
-  if (event.virtual) {
-    // The birthday lives in the details: opening it starts editing the contact.
-    row.addEventListener('click', (click) => {
-      click.preventDefault();
-      const edit = document.querySelector('[data-act="edit"]');
-      if (edit) edit.click();
-    });
-  }
+  // The birthday lives in the details: opening it starts editing the contact.
+  row.href = event.virtual ? `#/contact/${contact.id}/edit` : `#/event/${event.id}/${contact.id}`;
   const date = make('div', 'ev-date');
   date.append(make('span', 'ev-main', main));
   if (second) date.append(make('small', '', second));

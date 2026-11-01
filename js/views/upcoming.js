@@ -2,14 +2,15 @@
 // Shows events that are coming (including yearly ones such as birthdays) and contacts' birthdays, soonest first.
 
 import { strings, t } from '../strings.js';
+import { locale } from '../lang.js';
+import { monthName } from '../datewords.js';
 import * as store from '../store.js';
 import { daysInMonth, formatDate, isSingleDay, nextOccurrence, relative, startOfToday } from '../dates.js';
 import { displayName } from './contacts.js';
 
 const RANGES = [30, 90, 365, 0]; // days; 0 means everything that is coming
 const HOME_LIMIT = 5;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const weekday = (date) => date.toLocaleDateString(locale(), { weekday: 'short' }); // in the language in use
 const KEY = 'folkhold-upcoming';
 
 let days = 90;
@@ -78,8 +79,8 @@ function row(item, today) {
   const date = make('div', 'ev-date');
   const d = new Date(item.ts);
   if (item.exact) {
-    date.append(make('span', 'ev-main', `${d.getDate()} ${MONTHS[d.getMonth()]}`));
-    const sub = `${WEEKDAYS[d.getDay()]}${d.getFullYear() !== new Date(today).getFullYear() ? ` ${d.getFullYear()}` : ''}`;
+    date.append(make('span', 'ev-main', t('dates.dayMonth', { d: d.getDate(), m: monthName(d.getMonth() + 1, false) })));
+    const sub = `${weekday(d)}${d.getFullYear() !== new Date(today).getFullYear() ? ` ${d.getFullYear()}` : ''}`;
     date.append(make('small', '', sub));
   } else {
     date.append(make('span', 'ev-main', item.label));

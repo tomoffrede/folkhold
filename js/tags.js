@@ -1,9 +1,10 @@
 // Tags: your own labels for contacts ("work friend", "likes puzzles"). A tag is { name }; a contact lists its tags as "tagIds".
 
+import { locale } from './lang.js';
 import * as store from './store.js';
 import { strings } from './strings.js';
 
-const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
 export function clean(name) {
   return String(name || '').replace(/\s+/g, ' ').trim();

@@ -1,11 +1,12 @@
 // The relationship rows of the contact page: the editor rows (a label menu and a person field) and the read-only section.
 
+import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as relations from '../relations.js';
 import { collapsible } from './section.js';
 
-const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
 // The group for the label menu (see contact-page.js: labelOptions and toggleMenu use "labels" and "key").
 export const RELATION_GROUP = { key: 'relations', labels: relations.standardLabels() };
@@ -74,6 +75,7 @@ function choose(row, choice, defer) {
   else {
     setPerson(row, 'name', choice.name);
     relations.createContact(choice.name).then((id) => {
+      relations.createdInEditor.add(id);
       if (row.isConnected && row.querySelector('.rel-person').value === choice.name) {
         setPerson(row, 'contact', choice.name, id);
         const edit = row.querySelector('.rel-edit'); // the new contact can be opened right away

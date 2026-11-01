@@ -39,6 +39,7 @@ export function initNav() {
   document.addEventListener('click', (event) => {
     const link = event.target.closest && event.target.closest('a.back');
     if (!link || link.id === 'pages-back') return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; // open in a new tab as usual
     event.preventDefault();
     leave(link.getAttribute('href'));
   });

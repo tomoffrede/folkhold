@@ -10,7 +10,7 @@ import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
 import { locale } from '../lang.js';
 
 const $ = (id) => document.getElementById(id);
-const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
 let loaded = false;
 const selected = new Set(); // tags the list is filtered by
@@ -383,6 +383,13 @@ export function initContacts() {
     input.focus();
   });
   document.addEventListener('folkhold:ready', load);
+  // Coming back to the app after a while: bring in what changed on another device.
+  let lastSync = Date.now();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !store.isLoaded() || Date.now() - lastSync < 60000) return;
+    lastSync = Date.now();
+    store.sync().catch(() => {});
+  });
   document.addEventListener('folkhold:saved', () => {
     renderFilter();
     renderList();

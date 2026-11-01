@@ -2163,3 +2163,60 @@ body.page-open #auth-root {
 .hint .info-link {
   font-weight: 600;
 }
+
+/* Very long words and web addresses wrap instead of widening the page */
+.note-title,
+.note-line,
+.note-body,
+.note-meta,
+.ev-title,
+.ev-more,
+.ev-main,
+.info-value,
+.info-label,
+.person-name,
+.person-nick,
+.section-title,
+.sec-title,
+.hint,
+.result,
+.result-text,
+.rel-static,
+.empty {
+  overflow-wrap: anywhere;
+}
+
+.person > span:last-child,
+.ev-text,
+.note-card {
+  min-width: 0;
+}
+
+/* Contact chips (note and event forms) and the filter chips of the events page shrink instead of overflowing */
+.chip-contact {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.chip-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#events-page .prio-row {
+  flex-wrap: wrap;
+}
+
+#note-page .prio-row,
+#events-page .prio-row {
+  flex-wrap: wrap;
+}
+
+#note-page .prio-chip,
+#events-page .prio-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

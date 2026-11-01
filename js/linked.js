@@ -28,6 +28,7 @@ export function create(type, values, contactIds) {
 // Saves a changed item that was opened from the contact "originId". "managed" lists the fields the form handles.
 // "appliedIds": the other contacts that get the change too. The rest keep a copy of the old item.
 export async function saveEdit(type, item, managed, values, originId, appliedIds) {
+  item = store.get(type, item.id) || item; // the newest copy, so nothing saved elsewhere meanwhile is overwritten
   const others = (item.contactIds || []).filter((id) => id !== originId);
   const left = others.filter((id) => !appliedIds.includes(id));
 

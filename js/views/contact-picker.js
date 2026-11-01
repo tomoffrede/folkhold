@@ -2,11 +2,12 @@
 // createPicker({ selected, locked, onChange }) returns { element, getSelected() }.
 //   locked: a contact id that stays selected and cannot be removed
 
+import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import { displayName } from './contacts.js';
 
-const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
 function make(tag, className, text) {
   const node = document.createElement(tag);

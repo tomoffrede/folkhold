@@ -442,4 +442,5 @@ export default {
   "a2hs.show": "Zeig mir wie",
   "a2hs.hide": "Ausblenden",
   "a2hs.close": "Schließen",
+  'data.errConflict': "Das wurde in der Zwischenzeit auf einem anderen Gerät geändert. Die neueste Version ist jetzt geladen: Bitte prüfe sie und versuche es noch einmal.",
 };

@@ -17,7 +17,7 @@ const fold = (text) =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ') // letters and numbers of every script (not only a-z)
     .trim();
 
 export const standardLabels = () => KIND_ORDER.map((kind) => strings[`rel.${kind}`]);
@@ -42,8 +42,27 @@ export function splitName(text) {
   return fields;
 }
 
+// Contacts made from a relationship field of an editor that is open: if the relationship is then dropped
+// (Discard, or the row removed), a contact that is still only a name and is used nowhere is removed again.
+export const createdInEditor = new Set();
+
 export function createContact(name) {
   return store.add('contact', splitName(name));
+}
+
+export async function dropUnused() {
+  const ids = [...createdInEditor];
+  createdInEditor.clear();
+  for (const id of ids) {
+    const contact = store.get('contact', id);
+    if (!contact) continue;
+    const edited = Object.keys(contact).some((key) => !['id', 'firstName', 'lastName'].includes(key));
+    const used =
+      store.list('contact').some((other) => (other.relations || []).some((rel) => rel.contactId === id)) ||
+      store.list('note').some((note) => (note.contactIds || []).includes(id)) ||
+      store.list('event').some((event) => (event.contactIds || []).includes(id));
+    if (!edited && !used) await store.remove('contact', id);
+  }
 }
 
 function withoutId(contact) {

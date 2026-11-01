@@ -52,15 +52,15 @@ function expandYear(n) {
 }
 
 function validYear(year) {
-  return year >= 1900 && year <= 2100;
+  return year >= 1800 && year <= 2100;
 }
 
 // Turns pieces ({ kind, ... }) into a description with span and labels. Returns { error } for impossible dates.
 function describe(p) {
   const month = (long) => monthName(p.m, long);
   if (p.y && !validYear(p.y)) return { error: 'invalid' };
-  if (p.m && (p.m < 1 || p.m > 12)) return { error: 'invalid' };
-  if (p.d && (p.d < 1 || p.d > daysInMonth(p.m, p.y))) return { error: 'invalid' };
+  if (p.m != null && (p.m < 1 || p.m > 12)) return { error: 'invalid' }; // 0 is not a month either
+  if (p.d != null && (p.d < 1 || p.d > daysInMonth(p.m, p.y))) return { error: 'invalid' };
 
   if (p.kind === 'exact') return { ...p, from: iso(p.y, p.m, p.d), to: iso(p.y, p.m, p.d), label: (l) => `${dayMonth(p.d, p.m, l)}${yearJoin(l)}${p.y}` };
   if (p.kind === 'yearly') return { ...p, label: (l) => dayMonth(p.d, p.m, l) };
@@ -131,6 +131,7 @@ function parseSingle(raw) {
   if (rest.length) {
     const dayAllowed = month && !part && !season;
     if (dayAllowed && !rest[0].apostrophe && rest[0].n <= 31) day = rest.shift().n;
+    if (day === 0) return { error: 'invalid' };
     if (rest.length) short = rest.shift();
     if (rest.length || (short && year !== null)) return { error: 'unknown' };
     if (short) year = expandYear(short.n);
@@ -220,6 +221,11 @@ export function parseDate(input) {
       yearless = true;
     }
   }
+  // "winter 2024-25" (or 2024/25): the winter that starts in the first year.
+  const winter = text.match(/^([a-z]+)\s+(\d{4})\s*[-/]\s*(\d{2}|\d{4})$/);
+  if (winter && SEASONS[winter[1]] === 'Winter' && +winter[3].slice(-2) === (+winter[2] + 1) % 100) {
+    return parseDate(`${winter[1]} ${winter[2]}`);
+  }
   const toRegex = new RegExp(`-|\\b${TO_WORDS}\\b`);
   if (single.error && toRegex.test(text)) {
     // A hyphen with spaces around it (or a word like "to") is the safest place to cut: "2026-10-20 - 2026-11-17".
@@ -248,7 +254,11 @@ export function parseDate(input) {
         right = parseSingle(withYear(cut[1], DUMMY_YEAR));
         if (!left.error && !right.error && left.from > right.to) right = parseSingle(withYear(cut[1], DUMMY_YEAR + 1));
         yearless = true;
-      } else if (bare(left) && right.y) left = parseSingle(withYear(cut[0], right.y)); // "20 oct - 17 nov 2026": the year belongs to both
+      } else if (bare(left) && right.y) {
+        // "20 oct - 17 nov 2026": the year belongs to both. "dec - feb 2025": the first half is in the year before.
+        left = parseSingle(withYear(cut[0], right.y));
+        if (!left.error && left.m > right.m) left = parseSingle(withYear(cut[0], right.y - 1));
+      }
       else if (bare(right) && left.y) right = parseSingle(withYear(cut[1], left.y)); // "20 oct 2026 - 17 nov"
       if (!left.error && !right.error && left.from && right.from) {
         if (left.from <= right.to) range = { left, right };
@@ -333,9 +343,15 @@ export function formatDate(date) {
   if (!d) return '';
   if (d.src && relativeDayOf(fold(d.src).trim()) === undefined) {
     const parsed = parseDate(d.src);
-    if (!parsed.error && parsed.date) return parsed.date.text;
+    // Only when it still reads as what was saved (an older reading of the same text, such as a two-digit year, is not trusted).
+    if (!parsed.error && parsed.date && sameDate(parsed.date, d)) return parsed.date.text;
   } else if (d.yearly && !d.endMonth && !d.src) return dayMonth(d.day, d.month);
   return d.text || '';
+}
+
+function sameDate(a, b) {
+  if (a.from || b.from) return a.from === b.from && a.to === b.to;
+  return a.month === b.month && a.day === b.day && (a.endMonth || 0) === (b.endMonth || 0) && (a.endDay || 0) === (b.endDay || 0);
 }
 
 // The text of a date in two short lines for a narrow column: ["14 Mar", "2024"].

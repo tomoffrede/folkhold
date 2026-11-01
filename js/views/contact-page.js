@@ -508,7 +508,17 @@ function renderEditor(page, contact) {
 
 function render() {
   const route = parseRoute();
-  if (!route) return;
+  if (!route) {
+    // An address like #/contact/zzz: say so, instead of leaving the last contact on the screen.
+    if (/^#\/contact\//.test(location.hash)) {
+      contactId = null;
+      editing = false;
+      isNew = false;
+      const page = $('contact-page');
+      page.replaceChildren(make('p', 'empty', strings['contact.notFound']));
+    }
+    return;
+  }
   contactId = route.id;
   editing = route.edit;
   isNew = route.isNew;
@@ -532,6 +542,7 @@ function render() {
     page.append(make('p', 'empty', strings['contact.notFound']));
     return;
   }
+  if (!editing || isNew) relations.createdInEditor.clear();
   if (editing && !isNew) {
     const { id, ...fields } = contact;
     snapshot = JSON.parse(JSON.stringify(fields));
@@ -566,7 +577,7 @@ function readBirthday(block) {
     return { birthday: null, problem: true };
   }
   const year = yearText ? parseInt(yearText, 10) : null;
-  const yearBad = yearText && !(year >= 1900 && year <= new Date().getFullYear());
+  const yearBad = yearText && !(year >= 1800 && year <= new Date().getFullYear());
   if (yearBad || day < 1 || day > daysInMonth(month, year)) {
     say('contact.errBirthday', true);
     return { birthday: null, problem: true };
@@ -577,7 +588,8 @@ function readBirthday(block) {
 
 function readFields() {
   const page = $('contact-page');
-  const fields = { ...(contactId ? store.get('contact', contactId) : {}) };
+  const savedContact = (contactId && store.get('contact', contactId)) || {};
+  const fields = { ...savedContact };
   delete fields.id;
   MANAGED.forEach((key) => delete fields[key]);
 
@@ -607,12 +619,14 @@ function readFields() {
   if (!block.hidden) {
     const result = readBirthday(block);
     if (result.birthday) fields.birthday = result.birthday;
+    else if (result.problem && savedContact.birthday) fields.birthday = savedContact.birthday; // half-typed: keep what was saved
     if (result.problem) problem = 'contact.errBirthday';
   }
   const metBox = page.querySelector('[data-group="met"]');
   if (!metBox.hidden) {
     const result = readMet(metBox);
     if (result.date) fields.met = result.date;
+    else if (result.problem && savedContact.met) fields.met = savedContact.met; // half-typed: keep what was saved
     if (result.problem && !problem) problem = result.problem;
   }
   return { fields, problem };
@@ -652,7 +666,11 @@ function save() {
         return true;
       },
       (error) => {
-        if (id === contactId) {
+        if (id === contactId && error.conflict) {
+          dirty = false; // the other device's version is loaded: show it instead of overwriting it
+          render();
+          setStatus(error.message, true);
+        } else if (id === contactId) {
           dirty = true; // still unsaved, so leaving the page tries again
           setStatus(error.message, true);
         }
@@ -763,11 +781,11 @@ function syncEventNames() {
 }
 
 function pendingEvents() {
-  return [...document.querySelectorAll('#pending-notes .pending-event')].map((block) => block.eventFields.get());
+  return [...document.querySelectorAll('#pending-notes .pending-event')].map((block) => ({ ...block.eventFields.get(), block }));
 }
 
 function pendingNotes() {
-  return [...document.querySelectorAll('#pending-notes .pending-note:not(.pending-event)')].map((block) => block.noteFields.get());
+  return [...document.querySelectorAll('#pending-notes .pending-note:not(.pending-event)')].map((block) => ({ ...block.noteFields.get(), block }));
 }
 
 // Is there anything on the page that differs from how the contact was when the editor opened (or, when new, anything at all)?
@@ -807,6 +825,7 @@ function continueQueue(id) {
 
 function leaveEditor() {
   const id = contactId;
+  relations.dropUnused().catch(() => {});
   leaveTo(isNew ? cameFrom : `#/contact/${id}`);
   if (!isNew) continueQueue(id);
 }
@@ -912,8 +931,17 @@ async function saveNew(button) {
       newId = await store.add('contact', fields);
     }
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
-    for (const n of list) await notes.create({ ...n, contactIds: [newId] });
-    for (const e of eventList) await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
+    // A note or event that was saved before a failure is marked, so pressing Save again does not make it twice.
+    for (const n of list) {
+      if (n.block.dataset.saved) continue;
+      await notes.create({ title: n.title, body: n.body, priority: n.priority, contactIds: [newId] });
+      n.block.dataset.saved = '1';
+    }
+    for (const e of eventList) {
+      if (e.block.dataset.saved) continue;
+      await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
+      e.block.dataset.saved = '1';
+    }
     leaveTo(`#/contact/${newId}`);
     if (createdContacts.length) askEditCreated(createdContacts);
     if (movedBirthday) showToast(t('birthday.saved', { name: displayName(fields), date: formatDate(movedBirthday.date) }));
@@ -971,6 +999,7 @@ async function finish(button) {
   const ok = dirty ? await save() : await queue.then(() => !birthdayProblem && !$('contact-status').classList.contains('is-error'));
   button.disabled = false;
   if (ok && !birthdayProblem) {
+    relations.dropUnused().catch(() => {});
     leaveTo(`#/contact/${id}`);
     continueQueue(id);
   }
@@ -1066,4 +1095,8 @@ export function initContact() {
 
   document.addEventListener('folkhold:ready', render);
   document.addEventListener('folkhold:data', render);
+  // Changes that arrive from another device show up on a contact that is only being looked at.
+  document.addEventListener('folkhold:saved', () => {
+    if (!editing && !isNew && parseRoute()) render();
+  });
 }

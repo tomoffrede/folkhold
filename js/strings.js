@@ -438,6 +438,7 @@ export const strings = {
   'a2hs.show': "Show me how",
   'a2hs.hide': "Hide",
   'a2hs.close': "Close",
+  'data.errConflict': "This was changed on another device in the meantime. The latest version is now loaded: please check it and try again.",
 };
 
 // Fills {placeholders} in a string, for example t('auth.recoveryAccount', { name: 'tom' }).
