@@ -39,7 +39,6 @@ const GROUPS = [
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
 const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'relations', ...GROUPS.map((group) => group.key)];
-const MONTHS_SHORT = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'short' }));
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
 let contactId = null;
@@ -312,44 +311,23 @@ function birthdayBlock(birthday) {
   block.dataset.group = 'birthday';
   block.hidden = !birthday;
 
-  const day = make('input');
-  day.type = 'number';
-  day.min = '1';
-  day.max = '31';
-  day.inputMode = 'numeric';
-  day.dataset.part = 'day';
-  day.placeholder = strings['contact.day'];
-  day.setAttribute('aria-label', strings['contact.day']);
-  day.value = birthday ? birthday.day : '';
-
-  const month = make('select');
-  month.dataset.part = 'month';
-  month.setAttribute('aria-label', strings['contact.month']);
-  const none = make('option', '', strings['contact.month']);
-  none.value = '';
-  month.append(none);
-  MONTHS_SHORT.forEach((name, i) => {
-    const option = make('option', '', name);
-    option.value = String(i + 1);
-    month.append(option);
-  });
-  month.value = birthday ? String(birthday.month) : '';
-
-  const year = make('input');
-  year.type = 'number';
-  year.inputMode = 'numeric';
-  year.dataset.part = 'year';
-  year.placeholder = strings['contact.year'];
-  year.setAttribute('aria-label', strings['contact.year']);
-  year.value = birthday && birthday.year ? birthday.year : '';
+  const input = make('input');
+  input.type = 'text';
+  input.autocomplete = 'off';
+  input.autocapitalize = 'none';
+  input.spellcheck = false;
+  input.dataset.part = 'birthday';
+  input.placeholder = strings['contact.birthdayPlaceholder'];
+  input.setAttribute('aria-label', strings['contact.birthday']);
+  input.value = birthday ? formatBirthday(birthday) : '';
 
   const remove = make('button', 'entry-remove', '×');
   remove.type = 'button';
   remove.dataset.act = 'remove-birthday';
   remove.setAttribute('aria-label', strings['contact.remove']);
 
-  const row = make('div', 'birthday-row');
-  row.append(day, month, year, remove);
+  const row = make('div', 'met-row');
+  row.append(input, remove);
   block.append(make('h3', 'group-title', strings['contact.birthday']), row, make('p', 'hint birthday-note', strings['contact.birthdayHint']));
   return block;
 }
@@ -553,37 +531,38 @@ function render() {
 
 // ---------- reading the editor and saving ----------
 
-function daysInMonth(month, year) {
-  return new Date(year || 2000, month, 0).getDate(); // year 2000 is a leap year, so 29 Feb is allowed without a year
-}
-
-// Returns { birthday, problem }. A birthday with a missing or impossible date is not saved, and the note says why.
-function readBirthday(block) {
+// Returns { birthday, problem }. The birthday is typed freely ("14 March", "14.3.1990") and read like an event date.
+// Text that is not a day and month (and maybe a year) is not saved, and the note says why. "live" is for while typing: a softer note.
+function readBirthday(block, live = false) {
   const note = block.querySelector('.birthday-note');
-  const say = (key, isError) => {
-    note.textContent = strings[key];
-    note.classList.toggle('is-error', isError);
+  const say = (text, kind) => {
+    note.textContent = text;
+    note.classList.toggle('is-error', kind === 'error');
+    note.classList.toggle('is-unsure', kind === 'unsure');
+    note.classList.toggle('is-reading', kind === 'reading');
   };
-  const day = parseInt(block.querySelector('[data-part="day"]').value, 10);
-  const month = parseInt(block.querySelector('[data-part="month"]').value, 10);
-  const yearText = block.querySelector('[data-part="year"]').value.trim();
-
-  if (!day && !month && !yearText) {
-    say('contact.birthdayHint', false);
+  const text = block.querySelector('[data-part="birthday"]').value.trim();
+  if (!text) {
+    say(strings['contact.birthdayHint']);
     return { birthday: null, problem: false };
   }
-  if (!day || !month) {
-    say('contact.birthdayIncomplete', true);
+  const fail = (key) => {
+    say(strings[live ? 'event.readingUnsure' : key], live ? 'unsure' : 'error');
     return { birthday: null, problem: true };
+  };
+  const result = parseDate(text);
+  if (result.error) return fail(result.error === 'invalid' ? 'contact.errBirthday' : result.error === 'needYear' ? 'contact.errBirthdayNeedDay' : 'event.err.unknown');
+  const date = result.date;
+  let birthday = null;
+  if (date.yearly && !date.endMonth) birthday = { day: date.day, month: date.month };
+  else if (date.from && date.from === date.to) {
+    birthday = { day: +date.from.slice(8, 10), month: +date.from.slice(5, 7), year: +date.from.slice(0, 4) };
+    const now = new Date();
+    if (new Date(birthday.year, birthday.month - 1, birthday.day) > now) return fail('contact.errBirthdayFuture');
   }
-  const year = yearText ? parseInt(yearText, 10) : null;
-  const yearBad = yearText && !(year >= 1800 && year <= new Date().getFullYear());
-  if (yearBad || day < 1 || day > daysInMonth(month, year)) {
-    say('contact.errBirthday', true);
-    return { birthday: null, problem: true };
-  }
-  say('contact.birthdayHint', false);
-  return { birthday: year ? { day, month, year } : { day, month }, problem: false };
+  if (!birthday) return fail('contact.errBirthdayNeedDay');
+  say(`→ ${result.reading}`, 'reading');
+  return { birthday, problem: false };
 }
 
 function readFields() {
@@ -697,7 +676,7 @@ function addEntry(key) {
     const block = page.querySelector('[data-group="birthday"]');
     block.hidden = false;
     page.querySelector('[data-add="birthday"]').hidden = true;
-    block.querySelector('[data-part="day"]').focus();
+    block.querySelector('[data-part="birthday"]').focus();
     return;
   }
   if (key === 'met') {
@@ -980,11 +959,9 @@ function removeMet() {
 function removeBirthday() {
   const page = $('contact-page');
   const block = page.querySelector('[data-group="birthday"]');
-  block.querySelectorAll('input, select').forEach((field) => {
-    field.value = '';
-  });
+  block.querySelector('[data-part="birthday"]').value = '';
   block.querySelector('.birthday-note').textContent = strings['contact.birthdayHint'];
-  block.querySelector('.birthday-note').classList.remove('is-error');
+  block.querySelector('.birthday-note').classList.remove('is-error', 'is-unsure', 'is-reading');
   block.hidden = true;
   page.querySelector('[data-add="birthday"]').hidden = false;
   dirty = true;
@@ -1040,6 +1017,7 @@ function bindPage() {
     updateTitle();
     if (isNew) syncEventNames();
     if (event.target.dataset && event.target.dataset.part === 'met') showMetReading(event.target.closest('[data-group="met"]'));
+    if (event.target.dataset && event.target.dataset.part === 'birthday') readBirthday(event.target.closest('[data-group="birthday"]'), true);
     if (isNew) return; // a new contact is saved only when Save is pressed
     dirty = true;
     clearTimeout(timer);

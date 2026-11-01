@@ -490,17 +490,8 @@ a.person {
   margin-bottom: var(--space-2);
 }
 
-.birthday-row {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) 96px 44px;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
 .entry input,
-.entry textarea,
-.birthday-row input,
-.birthday-row select {
+.entry textarea {
   width: 100%;
   min-width: 0;
   height: 52px;
@@ -1363,6 +1354,11 @@ a.btn {
 
 .met-reading {
   margin: var(--space-2) 0 0;
+}
+
+.birthday-note.is-reading {
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 /* Tags */

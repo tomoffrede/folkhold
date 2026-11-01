@@ -11,6 +11,7 @@ import { confirmModal, closeOnOutsideClick } from './modal.js';
 
 const $ = (id) => document.getElementById(id);
 const radios = () => document.querySelectorAll('input[name="contact-sort"]');
+const orderRadios = () => document.querySelectorAll('input[name="date-order"]');
 const fieldBoxes = () => document.querySelectorAll('[data-hide-field]');
 
 let loaded = false;
@@ -34,6 +35,11 @@ function show() {
   const value = settings.get('contactSort');
   radios().forEach((radio) => {
     radio.checked = radio.value === value;
+    radio.disabled = false;
+  });
+  const order = settings.get('dateOrder');
+  orderRadios().forEach((radio) => {
+    radio.checked = radio.value === order;
     radio.disabled = false;
   });
   const lastMet = $('setting-lastmet');
@@ -247,4 +253,5 @@ export function initSettings() {
     box.addEventListener('change', () => save('hiddenFields', [...fieldBoxes()].filter((b) => !b.checked).map((b) => b.dataset.hideField))),
   );
   radios().forEach((radio) => radio.addEventListener('change', () => save('contactSort', radio.value)));
+  orderRadios().forEach((radio) => radio.addEventListener('change', () => save('dateOrder', radio.value)));
 }

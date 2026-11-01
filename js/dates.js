@@ -9,7 +9,7 @@
 // Events saved earlier with { precision, day, month, year } are still understood (see modernize).
 
 import { strings, t } from './strings.js';
-import { fold, MONTH_LOOKUP, SEASONS, monthName, relativeDay as relativeDayOf, normalizeWords, APPROX, TO_WORDS } from './datewords.js';
+import { fold, MONTH_LOOKUP, SEASONS, monthName, relativeDay as relativeDayOf, normalizeWords, APPROX, APPROX_END, TO_WORDS, WEEKDAYS, NUMBER_WORDS, UNITS, MODIFIERS, usOrder } from './datewords.js';
 
 // Month names and labels come from the language in use (see datewords.js and the "dates." texts in strings.js).
 const dayMonth = (d, m, long = false) => t(long ? 'dates.dayMonthLong' : 'dates.dayMonth', { d, m: monthName(m, long) });
@@ -73,10 +73,20 @@ function describe(p) {
     const [a, b] = p.part === 'early' ? [1, 4] : p.part === 'mid' ? [5, 8] : p.part === 'late' ? [9, 12] : [1, 12];
     return { ...p, vague: Boolean(p.part), from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => partLabel(p.part, String(p.y)) };
   }
-  // season
+  if (p.kind === 'span') return { ...p, vague: Boolean(p.vague), label: () => p.text }; // a stretch with its own wording: "Q1 2024", "1990s", "3–9 Nov 2026"
+  // season (early, mid and late are the first, middle and last month of it)
   const ranges = { Spring: [3, 5], Summer: [6, 8], Autumn: [9, 11], Winter: [12, 14] };
-  const [a, b] = ranges[p.season];
-  return { ...p, vague: true, from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => `${strings[`dates.${p.season.toLowerCase()}`]} ${p.y}` };
+  let [a, b] = ranges[p.season];
+  if (p.part) [a, b] = p.part === 'early' ? [a, a] : p.part === 'mid' ? [a + 1, a + 1] : [b, b];
+  return { ...p, vague: true, from: firstOf(p.y, a), to: lastOf(p.y, b), label: () => partLabel(p.part, `${strings[`dates.${p.season.toLowerCase()}`]} ${p.y}`) };
+}
+
+// Two numbers next to each other, like "5/3": day first or month first, as chosen in Settings. If the chosen order is impossible
+// ("14/3" with month first) the other order is used, so a date is never refused for being written the other way.
+function dayAndMonth(a, b) {
+  let [d, m] = usOrder() ? [b, a] : [a, b];
+  if (m > 12 && d <= 12) [d, m] = [m, d];
+  return { d, m };
 }
 
 // One date without a range. "ctx" can hold a year to use when the text has none (for the first half of a range).
@@ -93,14 +103,26 @@ function parseSingle(raw) {
   m = s.match(/^(\d{4})[./-](\d{1,2})$/);
   if (m && +m[2] >= 1 && +m[2] <= 12) return describe({ kind: 'month', y: +m[1], m: +m[2] });
   m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})$/);
-  if (m) return describe({ kind: 'exact', y: m[3].length === 2 ? expandYear(+m[3]) : +m[3], m: +m[2], d: +m[1] });
+  if (m) {
+    const { d, m: mo } = dayAndMonth(+m[1], +m[2]);
+    return describe({ kind: 'exact', y: m[3].length === 2 ? expandYear(+m[3]) : +m[3], m: mo, d });
+  }
   m = s.match(/^(\d{1,2})[./](\d{2})$/);
-  if (m && +m[2] > 12) return describe({ kind: 'month', y: expandYear(+m[2]), m: +m[1] }); // "3/24" can only be March 2024
+  // "3/24" is March 2024 (day first); with month first it is 24 March, unless the second number is no day.
+  if (m && +m[2] > 12 && !(usOrder() && +m[1] <= 12 && +m[2] <= 31)) return describe({ kind: 'month', y: expandYear(+m[2]), m: +m[1] });
   m = s.match(/^(\d{1,2})[./](\d{4})$/);
   if (m) return describe({ kind: 'month', y: +m[2], m: +m[1] });
   m = s.match(/^(\d{1,2})[./](\d{1,2})\.?$/);
-  if (m) return describe({ kind: 'yearly', m: +m[2], d: +m[1] });
+  if (m) {
+    const { d, m: mo } = dayAndMonth(+m[1], +m[2]);
+    return describe({ kind: 'yearly', m: mo, d });
+  }
   if (/^\d{4}$/.test(s)) return describe({ kind: 'year', y: +s });
+  m = s.match(/^['’](\d{2})$/);
+  if (m) return describe({ kind: 'year', y: expandYear(+m[1]) });
+
+  const family = familyRead(s);
+  if (family) return family;
 
   // Words: early/mid/late, a month or season name, a day and a year, in the usual orders.
   const words = normalizeWords(s)
@@ -141,8 +163,8 @@ function parseSingle(raw) {
     return { error: 'unknown' };
   }
   if (season) {
-    if (part || day) return { error: 'unknown' };
-    return year ? describe({ kind: 'season', season, y: year }) : { error: 'needYear' };
+    if (day) return { error: 'unknown' };
+    return year ? describe({ kind: 'season', season, y: year, part }) : { error: 'needYear' };
   }
   if (day) {
     if (part) return { error: 'unknown' };
@@ -151,16 +173,273 @@ function parseSingle(raw) {
   return year ? describe({ kind: 'month', y: year, m: month, part }) : { error: 'needYear' };
 }
 
+// ---------- quarters, halves, decades ----------
+
+const ORDINAL_WORDS = {
+  first: 1, erste: 1, primera: 1, seconde: 2, tercera: 3, erster: 1, erstes: 1, ersten: 1, premier: 1, premiere: 1, primer: 1, primero: 1, primeiro: 1, primeira: 1,
+  second: 2, zweite: 2, zweiter: 2, zweites: 2, zweiten: 2, deuxieme: 2, segundo: 2, segunda: 2,
+  third: 3, dritte: 3, drittes: 3, dritten: 3, troisieme: 3, tercer: 3, tercero: 3, terceiro: 3, terceira: 3,
+  fourth: 4, vierte: 4, viertes: 4, vierten: 4, quatrieme: 4, cuarto: 4, quarto: 4, quarta: 4,
+};
+const DECADE_WORDS = {
+  twenties: 20, thirties: 30, forties: 40, fifties: 50, sixties: 60, seventies: 70, eighties: 80, nineties: 90, noughties: 0,
+  zwanziger: 20, dreissiger: 30, vierziger: 40, funfziger: 50, sechziger: 60, siebziger: 70, achtziger: 80, neunziger: 90,
+};
+const PERIOD_WORD = '(?:quarter|quartal|trimestre|trimester|half|halfte|halbjahr|semestre|semester|quinzaine|quincena|quinzena)';
+
+const spanText = (from, to, long) => {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  if (fy === ty && fm === tm) return `${dayRange(fd, td, fm, long)}${yearJoin(long)}${fy}`;
+  if (fy === ty) return `${dayMonth(fd, fm, long)}–${dayMonth(td, tm, long)}${yearJoin(long)}${fy}`;
+  return `${dayMonth(fd, fm, long)}${yearJoin(long)}${fy}–${dayMonth(td, tm, long)}${yearJoin(long)}${ty}`;
+};
+
+// Quarters ("Q1 2024", "1. Quartal 2024"), halves of a year ("H2 2024") or of a month ("first half of March"), and decades ("the 90s").
+function familyRead(raw) {
+  let s = raw.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  // "first quarter", "erste Märzhälfte": the number word becomes a digit
+  s = s.replace(new RegExp(`\\b([a-z]+)\\b(?=\\s+(?:[a-z]+halfte\\b|${PERIOD_WORD}\\b))`, 'g'), (all, word) => (ORDINAL_WORDS[word] ? ORDINAL_WORDS[word] : all));
+  s = s.replace(/\b(\d)\s+([a-z]+?)halfte\b/, '$1 half $2');
+  let m;
+  const year = (text) => (text ? (text.length === 2 ? expandYear(+text) : +text) : null);
+
+  m = s.match(/^(?:(\d)\s*(?:quarter|quartal|trimestre|trimester|q|t)|[qt]\s*(\d))(?:\s+(\d{4}|\d{2}))?$/);
+  if (m) {
+    const q = +(m[1] || m[2]);
+    const y = year(m[3]);
+    if (q < 1 || q > 4) return { error: 'invalid' };
+    if (!y) return { error: 'needYear' };
+    return describe({ kind: 'span', y, from: firstOf(y, q * 3 - 2), to: lastOf(y, q * 3), text: `Q${q} ${y}`, vague: true });
+  }
+  m = s.match(/^(?:kw|cw|wk|week|woche|semaine|semana|sem)\s*(\d{1,2})(?:\s+(\d{4}|\d{2}))?$/);
+  if (m) {
+    const y = year(m[2]);
+    if (+m[1] < 1 || +m[1] > 53) return { error: 'invalid' };
+    if (!y) return { error: 'needYear' };
+    const jan4 = new Date(y, 0, 4);
+    const monday = new Date(y, 0, 4 - ((jan4.getDay() || 7) - 1) + (+m[1] - 1) * 7);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    const from = fromTs(monday.getTime());
+    const to = fromTs(sunday.getTime());
+    return describe({ kind: 'span', y, from, to, text: spanText(from, to, false), vague: false });
+  }
+  m = s.match(/^(?:(\d)\s*(?:half|halbjahr|semestre|semester|s)|[hs]\s*(\d))(?:\s+(\d{4}|\d{2}))?$/);
+  if (m) {
+    const h = +(m[1] || m[2]);
+    const y = year(m[3]);
+    if (h < 1 || h > 2) return { error: 'invalid' };
+    if (!y) return { error: 'needYear' };
+    return describe({ kind: 'span', y, from: firstOf(y, h === 1 ? 1 : 7), to: lastOf(y, h === 1 ? 6 : 12), text: `H${h} ${y}`, vague: true });
+  }
+  m = s.match(/^(\d)\s*(?:half|halfte|quinzaine|quincena|quinzena)\s+([a-z]+)(?:\s+(\d{4}|\d{2}))?$/);
+  if (m && MONTH_LOOKUP[m[2]]) {
+    const month = MONTH_LOOKUP[m[2]];
+    const y = year(m[3]);
+    if (+m[1] < 1 || +m[1] > 2) return { error: 'invalid' };
+    if (!y) return { error: 'needYear' };
+    const first = +m[1] === 1;
+    const from = iso(y, month, first ? 1 : 16);
+    const to = iso(y, month, first ? 15 : daysInMonth(month, y));
+    return describe({ kind: 'span', y, from, to, text: spanText(from, to, false), vague: true });
+  }
+
+  // Decades: "1990s", "the 90s", "in den 90ern", "années 90", "Ende der Neunziger", "early 90s"
+  m = s.match(/^(early|mid|late)?\s*(?:(annees|anos|years|jahre|decada|decade)\s+)?(?:(\d{4}|\d{2})\s*(s|er|ern|ers)?|([a-z]+))$/);
+  if (m) {
+    const [, part, word, digits, suffix, name] = m;
+    if (name && DECADE_WORDS[name] !== undefined) return decade(part, DECADE_WORDS[name] >= 30 ? 1900 + DECADE_WORDS[name] : 2000 + DECADE_WORDS[name]);
+    if (digits && (suffix || word) && +digits % 10 === 0) return decade(part, digits.length === 4 ? +digits : +digits >= 30 ? 1900 + +digits : 2000 + +digits);
+  }
+  return null;
+}
+
+function decade(part, start) {
+  if (start < 1800 || start > 2090) return { error: 'invalid' };
+  const [a, b] = part === 'early' ? [0, 3] : part === 'mid' ? [4, 6] : part === 'late' ? [7, 9] : [0, 9];
+  return describe({ kind: 'span', y: start, from: firstOf(start + a, 1), to: lastOf(start + b, 12), text: partLabel(part, `${start}s`), vague: true });
+}
+
+// ---------- "last week", "2 years ago", "next friday" ----------
+
+// Returns a description, or null when the text is not a relative date.
+function relativeRead(raw) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const at = (n) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + n);
+  const exact = (d) => describe({ kind: 'exact', y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() });
+  const monthOf = (y, m) => {
+    const d = new Date(y, m - 1, 1);
+    return describe({ kind: 'month', y: d.getFullYear(), m: d.getMonth() + 1 });
+  };
+  const span = (a, b) => {
+    const from = fromTs(a.getTime());
+    const to = fromTs(b.getTime());
+    return describe({ kind: 'span', y: a.getFullYear(), from, to, text: spanText(from, to, false), vague: false });
+  };
+  const text = raw.replace(/[,.]/g, ' ').replace(/\b[dl]'/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+
+  // "2 years ago", "vor zwei Wochen", "il y a 3 mois", "hace una semana", "in 2 weeks", "dans 3 jours", "daqui a 2 semanas"
+  const num = '(\\d+|[a-z]+)';
+  const past = text.match(new RegExp(`^(?:(?:vor|il y a|hace|faz|ha)\\s+${num}\\s+([a-z-]+)|${num}\\s+([a-z-]+)\\s+ago)$`));
+  const future = text.match(new RegExp(`^(?:in|dans|dentro de|daqui a|en|em|binnen)\\s+${num}\\s+([a-z-]+)$`));
+  const hit = past || future;
+  if (hit) {
+    const [n0, u0] = past ? (hit[1] ? [hit[1], hit[2]] : [hit[3], hit[4]]) : [hit[1], hit[2]];
+    const n = /^\d+$/.test(n0) ? +n0 : NUMBER_WORDS[n0];
+    const unit = UNITS[u0];
+    if (n && unit && unit !== 'weekend') {
+      const dir = past ? -1 : 1;
+      if (unit === 'day') return exact(at(dir * n));
+      if (unit === 'week') return exact(at(dir * n * 7));
+      if (unit === 'month') return monthOf(today.getFullYear(), today.getMonth() + 1 + dir * n);
+      return describe({ kind: 'year', y: today.getFullYear() + dir * n });
+    }
+  }
+
+  // "last week", "this month", "next year", "vendredi dernier", "el mes que viene", "mês que vem", "last march", "next friday", "last summer"
+  const tokens = text.split(' ');
+  const skip = new Set(['the', 'a', 'el', 'la', 'le', 'les', 'lo', 'los', 'las', 'o', 'os', 'no', 'na', 'nos', 'nas', 'em', 'en', 'in', 'on', 'at', 'im', 'am', 'dem', 'den', 'das', 'die', 'der', 'de', 'da', 'do', 'del', 'du', 'zum', 'que', 'of']);
+  let direction = null;
+  const core = [];
+  tokens.forEach((token) => {
+    if (token === 'vem' || token === 'viene') direction = 1;
+    else if (MODIFIERS[token] !== undefined && direction === null) direction = MODIFIERS[token];
+    else if (!skip.has(token)) core.push(token);
+  });
+  if (direction === null || core.length !== 1) return null;
+  const word = core[0];
+  const unit = UNITS[word];
+  const dayNumber = today.getDay();
+  if (unit === 'week') {
+    const monday = at(1 - (dayNumber || 7) + direction * 7);
+    return span(monday, new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6));
+  }
+  if (unit === 'weekend') {
+    const saturday = at((dayNumber === 0 ? -1 : 6 - dayNumber) + direction * 7);
+    return span(saturday, new Date(saturday.getFullYear(), saturday.getMonth(), saturday.getDate() + 1));
+  }
+  if (unit === 'month') return monthOf(today.getFullYear(), today.getMonth() + 1 + direction);
+  if (unit === 'year') return describe({ kind: 'year', y: today.getFullYear() + direction });
+  if (unit === 'day') return null;
+  if (WEEKDAYS[word] !== undefined) {
+    const wanted = WEEKDAYS[word];
+    let diff = (wanted - dayNumber + 7) % 7;
+    if (direction < 0) diff = diff === 0 ? -7 : diff - 7;
+    else if (direction > 0 && diff === 0) diff = 7;
+    return exact(at(diff));
+  }
+  const month = MONTH_LOOKUP[word];
+  if (month) {
+    const here = today.getMonth() + 1;
+    const y = today.getFullYear();
+    if (direction === 0) return monthOf(y, month);
+    if (direction < 0) return monthOf(month < here ? y : y - 1, month);
+    return monthOf(month > here ? y : y + 1, month);
+  }
+  if (SEASONS[word]) {
+    const season = SEASONS[word];
+    const startMonth = { Spring: 3, Summer: 6, Autumn: 9, Winter: 12 }[season];
+    const range = (y) => [new Date(y, startMonth - 1, 1), new Date(y, startMonth + 2, 0)];
+    const y = today.getFullYear();
+    let pick = y;
+    if (direction === 0) pick = season === 'Winter' && today.getMonth() < 2 ? y - 1 : y;
+    else if (direction < 0) pick = [y, y - 1, y - 2].find((c) => range(c)[1] < today);
+    else pick = [y, y + 1, y + 2].find((c) => range(c)[0] > today);
+    return describe({ kind: 'season', season, y: pick });
+  }
+  return null;
+}
+
+// ---------- cleaning what was typed ----------
+
+const WEEKDAY_NAMES = Object.keys(WEEKDAYS).sort((a, b) => b.length - a.length).join('|');
+const WEEKDAY_RE = new RegExp(`\\b(?:${WEEKDAY_NAMES})(?![a-z])(?:[- ]feira)?\\b[.,]?(?!\\s+(?:quinzena|quincena|trimestre|metade|semestre|hal))`, 'g');
+const LEADING_FILLER = /^(?:a(?=\s+(?:la|mediados|principios|finales|fines|comienzos|inicios)\b)|on|in|at|the|am|an|im|den|der|dem|die|das|zum|zur|ab|le|la|les|el|los|las|lo|en|au|aux|dans|em|no|na|nos|nas|o|os|do|dos|da|du|de|del|des|von|vom|from|since|seit|depuis|desde|day|days|dia|dias|jour|tag|tage|mes|mois|month|monat|year|jahr|jahre|ano|annee|anno|courant|whole|all|of)\b[.,]?\s*/;
+
+// Takes away what does not matter: times, weekdays ("Tuesday"), words like "on the" or "le", "first" for 1.
+function clean(text) {
+  let s = text
+    .replace(/(\d)t(?=\d{1,2}:\d{2})/g, '$1 ') // 2024-03-05T10:00
+    .replace(/\s*(?:\b(?:um|at|a las|a la|as|a|à)\s+)?\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:uhr|h|am|pm)\b)?(?:z\b)?/g, ' ')
+    .replace(/\s*(?:\bum\s+)?\b\d{1,2}\s*uhr\b/g, ' ')
+    .replace(/\b(?:weekend|wochenende|week-end|fin de semana|fin de semaine|fim de semana)\b/g, ' ')
+    .replace(/\bmar[.,]?\s+(?=\d{1,2}(?:st|nd|rd|th|º|°|o)?\s+(?:de\s+)?[a-z]{3})/g, ' ') // "mar 5 de marzo" (Tuesday), not "Mar 5, 2024" (March)
+    .replace(/\b(?:mo|di|mi|do|fr|sa|so)(?:[.,]|\s+(?=\d))/g, ' ') // German short weekdays: "Di, 5.3."
+    .replace(WEEKDAY_RE, ' ')
+    .replace(/\blos\s+(\d0)\b/g, '$1s') // "los 90"
+    .replace(/\s+/g, ' ')
+    .trim();
+  // "le premier mars", "el primero de marzo", "primeiro de março": the first day
+  s = s.replace(/\b(?:premier|primero|primeiro|first)\s+(?:of\s+|de\s+)?([a-z]+)/g, (all, next) => (MONTH_LOOKUP[next] ? `1 ${next}` : all));
+  let before;
+  do {
+    before = s;
+    s = s.replace(LEADING_FILLER, '');
+  } while (s !== before);
+  return s;
+}
+
 // Adds a year to a date that has none: "20.10" becomes "20.10.2026", "20 oct" becomes "20 oct 2026".
 function withYear(text, year) {
   const numeric = text.match(/^(\d{1,2})([./-])(\d{1,2})\.?$/);
   return numeric ? `${numeric[1]}${numeric[2]}${numeric[3]}${numeric[2]}${year}` : `${text} ${year}`;
 }
 
-// "~" or a word like "around" in front makes a date approximate.
+// "~" or a word like "around" in front (or "or so" behind) makes a date approximate.
 function stripApprox(text) {
-  const m = text.trim().match(new RegExp(`^${APPROX}\\s*(.*)$`, 'i'));
-  return m ? { approx: true, rest: m[1] } : { approx: false, rest: text.trim() };
+  let rest = text.trim();
+  let approx = false;
+  const end = rest.match(APPROX_END);
+  if (end) {
+    rest = rest.slice(0, end.index).trim();
+    approx = true;
+  }
+  const m = rest.match(new RegExp(`^${APPROX}\\s*(.*)$`, 'i'));
+  return m ? { approx: true, rest: m[1] } : { approx, rest };
+}
+
+// Everything that happens to the typed text before it is read: filler words, weekdays and times are dropped, "between X and Y" and
+// "5 and 6 March" become ranges, spacing and compact forms ("5 / 3 / 2024", "20240305", "5-Mar-2024") are tidied.
+function prepare(typed) {
+  const folded = fold(typed).trim();
+  const bare = folded.replace(/^(?:the|el|le|la|lo)\s+/, '');
+  if (relativeDayOf(bare) !== undefined) return { rel: parseSingle(bare), text: bare, approx: false };
+  const rel = relativeRead(folded);
+  if (rel) return { rel, text: folded, approx: false };
+
+  const between = /^(?:between|entre|zwischen)\s/.test(folded);
+  const first = stripApprox(folded.replace(/^(?:between|entre|zwischen)\s+/, ''));
+  const second = stripApprox(clean(first.rest));
+  const approx = first.approx || second.approx;
+  const rest = second.rest;
+  let text = normalizeWords(
+    clean(rest)
+      .replace(/\b([a-z]{3,})\s+(?:de|del)\s+(\d{2})$/, (all, word, yy) => (MONTH_LOOKUP[word] ? `${word} '${yy}` : all)) // "marzo del 24": a year
+      .replace(/[–—]/g, '-')
+      .replace(/(\d)\.(?=\s*-)/g, '$1') // "14.–16. März": the dot after a day is dropped
+      .replace(/(\d)\.\s+(?=[a-z])/g, '$1 '),
+  )
+    .replace(/\s+/g, ' ')
+    .replace(/^[,;\s]+|[,;\s]+$/g, '');
+  if (between) text = text.replace(/ (?:and|und|et|y|e) /, ' - ');
+  text = text.replace(/^(\d{1,2})\.?\s*(?:and|und|et|y|e|&|\+|\/)\s*(?=(\d{1,2})\s+([a-z]+))/, (all, day, n, word) => (MONTH_LOOKUP[word] ? `${day} - ` : all)); // "5 and 6 March", "5./6. März"
+
+  if (/^[\d\s./-]+$/.test(text)) {
+    text = text.replace(/(\d)\s*([./])\s*(?=\d)/g, '$1$2'); // "5. 3. 2024", "5 / 3 / 2024"
+    text = text.replace(/^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/, '$1.$2.$3').replace(/^(\d{4})\s+(\d{1,2})\s+(\d{1,2})$/, '$1-$2-$3');
+    const compact = text.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (compact && +compact[2] >= 1 && +compact[2] <= 12 && +compact[3] >= 1 && +compact[3] <= 31) text = `${compact[1]}-${compact[2]}-${compact[3]}`;
+    text = text.replace(/^(\d{4}-\d{2}-\d{2})\s*\/\s*(\d{4}-\d{2}-\d{2})$/, '$1 - $2');
+    const years = text.match(/^(\d{4})\/(\d{4}|\d{2})$/);
+    if (years && +years[2].slice(-2) === (+years[1] + 1) % 100) text = `${years[1]} - ${years[2]}`; // "2019/2020", "2019/20": two years
+  }
+  text = text
+    .replace(/^(\d{1,2})[-/.]([a-z]{3,})[-/.](\d{2}|\d{4})$/, '$1 $2 $3') // "5-Mar-2024"
+    .replace(/^(\d{4})[-/.]([a-z]{3,})[-/.](\d{1,2})$/, '$3 $2 $1') // "2024-Mar-05"
+    .replace(/^([a-z]{3,})[-/.](\d{4})$/, '$1 $2').replace(/^([a-z]{3,})[-/.](\d{2})$/, "$1 '$2"); // "mar/2024", "mar-24"
+  return { rel: null, text, approx };
 }
 
 // How much a ~ widens a date.
@@ -203,15 +482,10 @@ function rangeLabel(left, right, long) {
 export function parseDate(input) {
   const typed = String(input || '').trim();
   if (!typed) return { error: 'empty' };
-  const { approx, rest } = stripApprox(fold(typed));
-  const text = rest
-    .replace(/[–—]/g, '-')
-    .replace(/(\d)\.(?=\s*-)/g, '$1') // "14.–16. März": the dot after a day is dropped
-    .replace(/(\d)\.\s+(?=[a-z])/g, '$1 ')
-    .replace(/^(?:del|de|du|von|vom|from)\s+(?=\d)/, ''); // "del 14 al 16 de marzo", "du 14 au 16 mars"
+  const { rel, text, approx } = prepare(typed);
   if (!text) return { error: 'unknown' };
 
-  let single = parseSingle(text);
+  let single = rel || parseSingle(text);
   let range = null;
   let yearless = false; // a month, season or range without a year: it comes round every year
   if (single.error === 'needYear') {

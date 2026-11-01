@@ -2,11 +2,13 @@
 // get('contactSort') reads a setting (with its default); set('contactSort', 'last') saves one.
 
 import * as store from './store.js';
+import { setOrderProvider } from './datewords.js';
 
 const DEFAULTS = {
   contactSort: 'first', // 'first' = by first name, 'last' = by last name
   showLastMet: true, // show "Last met: ..." on a contact's page
   hiddenFields: [], // detail buttons not offered: 'emails', 'phones', 'addresses', 'handles', 'birthday', 'met'
+  dateOrder: 'dmy', // 'dmy' = day first (5/3 is 5 March), 'mdy' = month first, US style (5/3 is 3 May)
   showPriority: true, // show the priority choice when writing a note
 };
 
@@ -53,3 +55,5 @@ export function set(key, value) {
   queue = run.catch(() => {}); // a failed save must not block the next one
   return run;
 }
+
+setOrderProvider(() => get('dateOrder')); // the date reader (dates.js) asks here how to read numbers like 5/3/2024
