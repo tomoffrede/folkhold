@@ -26,7 +26,10 @@ function current() {
   return { ...merged, id: list[0].id };
 }
 
+const local = {}; // a choice that is being saved already counts
+
 export function get(key) {
+  if (key in local) return local[key];
   const item = current();
   return item && item[key] !== undefined ? item[key] : DEFAULTS[key];
 }
@@ -44,6 +47,7 @@ async function write(key, value) {
 }
 
 export function set(key, value) {
+  local[key] = value;
   const run = queue.then(async () => {
     try {
       await write(key, value);
@@ -53,6 +57,10 @@ export function set(key, value) {
     }
   });
   queue = run.catch(() => {}); // a failed save must not block the next one
+  const done = () => {
+    if (local[key] === value) delete local[key];
+  };
+  run.then(done, done);
   return run;
 }
 

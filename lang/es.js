@@ -14,6 +14,7 @@ export default {
   'home.upcomingEmpty': 'Todavía no hay nada próximo.',
 
   'contacts.title': 'Contactos',
+  'contacts.sortBy': 'Ordenar por',
   'contacts.empty': 'Todavía no hay contactos.',
   'contacts.add': 'Añadir contacto',
   'contacts.loading': 'Cargando…',

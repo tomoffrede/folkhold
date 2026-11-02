@@ -5,12 +5,8 @@
 // The other contact's page shows the same relationship the other way round (Parent becomes Child), worked out here when needed.
 
 import * as store from './store.js';
-import { strings } from './strings.js';
-
-// Standard kinds and what each one is called from the other side.
-export const INVERSE = { partner: 'partner', friend: 'friend', bestFriend: 'bestFriend', parent: 'child', child: 'parent', sibling: 'sibling', colleague: 'colleague', ex: 'ex' };
-export const KIND_ORDER = Object.keys(INVERSE);
-const ENGLISH = { partner: 'partner', friend: 'friend', bestFriend: 'best friend', parent: 'parent', child: 'child', sibling: 'sibling', colleague: 'colleague', ex: 'ex' };
+import { getLang } from './lang.js';
+import { KINDS } from './relkinds.js';
 
 const fold = (text) =>
   String(text || '')
@@ -20,16 +16,73 @@ const fold = (text) =>
     .replace(/[^\p{L}\p{N}]+/gu, ' ') // letters and numbers of every script (not only a-z)
     .trim();
 
-export const standardLabels = () => KIND_ORDER.map((kind) => strings[`rel.${kind}`]);
+// What each kind is called from the other side ("mother" -> "child"), and the general kind of a specific one ("mother" -> "parent").
+export const INVERSE = Object.fromEntries(KINDS.map((kind) => [kind.key, kind.inverse]));
+const BASE = Object.fromEntries(KINDS.filter((kind) => kind.base).map((kind) => [kind.key, kind.base]));
+export const KIND_ORDER = KINDS.map((kind) => kind.key);
+const BY_KEY = Object.fromEntries(KINDS.map((kind) => [kind.key, kind]));
 
-// The standard kind that a typed word means, in the language in use or in English; null for any other word.
+// Every word of every language, and the kind it means. Words are matched with their accents first ("avó" is a grandmother, "avô" a
+// grandfather) and without accents second ("avo"). When two kinds share a word, the first kind in the list wins.
+const exactFold = (text) => String(text || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const WORDS = new Map();
+const EXACT = new Map();
+KINDS.forEach((kind) => {
+  Object.values(kind.terms).forEach((list) => {
+    list.forEach((term) => {
+      if (fold(term) && !WORDS.has(fold(term))) WORDS.set(fold(term), kind.key);
+      if (exactFold(term) && !EXACT.has(exactFold(term))) EXACT.set(exactFold(term), kind.key);
+    });
+  });
+});
+
+// How a kind is shown in the language in use.
+export const labelOf = (kind) => {
+  const entry = BY_KEY[kind];
+  return entry ? entry.terms[getLang()][0] || entry.terms.en[0] : '';
+};
+
+// The kinds offered in the menu; every other kind is suggested while typing.
+const MENU = ['partner', 'spouse', 'friend', 'bestFriend', 'parent', 'child', 'sibling', 'grandparent', 'cousin', 'colleague', 'neighbor', 'ex'];
+export const standardLabels = () => MENU.map(labelOf);
+
+// The kind that a typed word means (in any language); null for any other word.
 export function kindOf(text) {
   const wanted = fold(text);
-  if (!wanted) return null;
-  return KIND_ORDER.find((kind) => fold(strings[`rel.${kind}`]) === wanted || ENGLISH[kind] === wanted) || null;
+  return (wanted && (EXACT.get(exactFold(text)) || WORDS.get(wanted))) || null;
 }
 
-export const labelText = (rel) => (rel.kind ? strings[`rel.${rel.kind}`] : rel.label || '');
+// Kinds that match what is being typed, as they are shown in the language in use: words that start with it first.
+export function suggest(text, limit = 8) {
+  const wanted = fold(text);
+  if (!wanted) return [];
+  const found = [];
+  KINDS.forEach((kind, order) => {
+    let best = 9;
+    Object.values(kind.terms).forEach((list) =>
+      list.forEach((term) => {
+        const folded = fold(term);
+        const at = folded.indexOf(wanted);
+        if (at < 0) return;
+        const score = at === 0 ? 0 : folded[at - 1] === ' ' ? 1 : 2;
+        if (score < best) best = score;
+      }),
+    );
+    if (best < 9) found.push({ kind: kind.key, best, order });
+  });
+  return found
+    .sort((a, b) => a.best - b.best || a.order - b.order)
+    .slice(0, limit)
+    .map((item) => labelOf(item.kind));
+}
+
+// The kind a saved relationship stands for: the standard one, or the one its typed word means.
+export const kindFor = (rel) => rel.kind || kindOf(rel.label);
+
+export const labelText = (rel) => {
+  const kind = kindFor(rel);
+  return kind ? labelOf(kind) : rel.label || '';
+};
 export const newId = () => crypto.randomUUID();
 
 const nameOf = (contact) => [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.nickname || '';
@@ -53,6 +106,7 @@ export function createContact(name) {
 export async function dropUnused() {
   const ids = [...createdInEditor];
   createdInEditor.clear();
+  const kept = []; // still only a name, and in use: their details can be offered
   for (const id of ids) {
     const contact = store.get('contact', id);
     if (!contact) continue;
@@ -62,7 +116,9 @@ export async function dropUnused() {
       store.list('note').some((note) => (note.contactIds || []).includes(id)) ||
       store.list('event').some((event) => (event.contactIds || []).includes(id));
     if (!edited && !used) await store.remove('contact', id);
+    else if (!edited) kept.push({ id, name: nameOf(contact) });
   }
+  return kept;
 }
 
 function withoutId(contact) {
@@ -78,16 +134,17 @@ export function listFor(contact) {
     const target = rel.contactId ? store.get('contact', rel.contactId) : null;
     const name = target ? nameOf(target) : rel.name || '';
     if (!name) return;
-    rows.push({ relId: rel.id, ownerId: contact.id, own: true, kind: rel.kind, label: labelText(rel), contactId: target ? target.id : null, name });
+    rows.push({ relId: rel.id, ownerId: contact.id, own: true, kind: kindFor(rel), label: labelText(rel), contactId: target ? target.id : null, name });
   });
   store.list('contact').forEach((other) => {
     if (other.id === contact.id) return;
     (other.relations || []).forEach((rel) => {
       if (rel.contactId !== contact.id) return;
-      const kind = rel.kind ? INVERSE[rel.kind] : null;
-      const label = kind ? strings[`rel.${kind}`] : rel.label || '';
-      // The same relationship entered on both pages is shown once.
-      const twice = rows.some((row) => row.own && row.contactId === other.id && (kind ? row.kind === kind : !row.kind && fold(row.label) === fold(label)));
+      const ownKind = kindFor(rel);
+      const kind = ownKind ? INVERSE[ownKind] : null;
+      const label = kind ? labelOf(kind) : rel.label || '';
+      // The same relationship entered on both pages is shown once ("Mother" here, "Child" there; "Daughter" there is the same as "Child").
+      const twice = rows.some((row) => row.own && row.contactId === other.id && (kind ? row.kind === kind || BASE[row.kind] === kind || BASE[kind] === row.kind : !row.kind && fold(row.label) === fold(label)));
       if (twice) return;
       rows.push({ relId: rel.id, ownerId: other.id, own: false, kind, label, contactId: other.id, name: nameOf(other) });
     });
@@ -158,8 +215,9 @@ export async function detachContact(contact) {
     });
     // What the deleted contact had saved about this person is kept on this person's page, unless it was entered there too.
     mirrored.forEach((rel) => {
-      const kind = rel.kind ? INVERSE[rel.kind] : null;
-      const known = relations.some((r) => r.name === deletedName && (kind ? r.kind === kind : !r.kind && fold(r.label) === fold(rel.label)));
+      const own = kindFor(rel);
+      const kind = own ? INVERSE[own] : null;
+      const known = relations.some((r) => r.name === deletedName && (kind ? kindFor(r) === kind : !kindFor(r) && fold(r.label) === fold(rel.label)));
       if (!known && deletedName) relations.push({ id: newId(), ...(kind ? { kind } : { label: rel.label }), name: deletedName });
     });
     relations = relations.filter((rel) => rel.contactId || rel.name);

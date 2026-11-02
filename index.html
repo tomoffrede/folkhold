@@ -74,6 +74,7 @@
 <button type="button" class="btn btn-secondary btn-small filter-button" id="filter-button" aria-expanded="false" data-text="filter.button"></button>
 </div>
 <div class="tag-filter" id="contacts-filter" hidden></div>
+<div class="sort-line"><span class="sort-label" data-text="contacts.sortBy"></span><span class="chips" id="contacts-sort"></span></div>
 <ul class="people" id="contacts-list"></ul>
 <div id="search-results" hidden></div>
 <p class="empty" id="contacts-nomatch" data-text="contacts.noMatch" hidden></p>
@@ -105,14 +106,6 @@
 <div class="account">
 <p class="account-line"><span data-text="settings.signedInAs"></span> <strong id="settings-username"></strong></p>
 <button type="button" class="btn btn-secondary btn-small" data-action="sign-out" data-text="settings.signOut"></button>
-</div>
-
-<div class="setting">
-<h3 class="group-title" data-text="settings.sortTitle"></h3>
-<div class="choice">
-<label class="choice-option"><input type="radio" name="contact-sort" value="first" checked disabled><span data-text="settings.sortFirst"></span></label>
-<label class="choice-option"><input type="radio" name="contact-sort" value="last" disabled><span data-text="settings.sortLast"></span></label>
-</div>
 </div>
 
 <div class="setting">

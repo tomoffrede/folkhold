@@ -17,6 +17,7 @@ export const strings = {
   'home.upcomingEmpty': 'Nothing coming up yet.',
 
   'contacts.title': 'Contacts',
+  'contacts.sortBy': 'Sort by',
   'contacts.empty': 'No contacts yet.',
   'contacts.add': 'Add contact',
   'contacts.loading': 'Loading…',

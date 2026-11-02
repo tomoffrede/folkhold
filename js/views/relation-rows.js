@@ -9,7 +9,7 @@ import { collapsible } from './section.js';
 const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
 // The group for the label menu (see contact-page.js: labelOptions and toggleMenu use "labels" and "key").
-export const RELATION_GROUP = { key: 'relations', labels: relations.standardLabels() };
+export const RELATION_GROUP = { key: 'relations', labels: relations.standardLabels(), suggest: relations.suggest };
 
 function make(tag, className, text) {
   const node = document.createElement(tag);

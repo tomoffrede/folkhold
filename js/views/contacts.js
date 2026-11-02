@@ -57,7 +57,7 @@ function personRow(contact) {
   return item;
 }
 
-// What the list is sorted by: the full name, or (in Settings) the last name first.
+// What the list is sorted by: the full name, or the last name first (chosen with the chips above the list).
 function sortName(contact) {
   if (settings.get('contactSort') === 'last') {
     const last = contact.lastName || contact.firstName || contact.nickname || '';
@@ -303,7 +303,26 @@ function renderSearch() {
   }
 }
 
+function renderSortChips() {
+  const chips = $('contacts-sort');
+  const current = settings.get('contactSort');
+  if (!chips.children.length) {
+    ['first', 'last'].forEach((value) => {
+      const chip = el('button', 'chip prio-chip', strings[value === 'first' ? 'settings.sortFirst' : 'settings.sortLast']);
+      chip.type = 'button';
+      chip.dataset.sort = value;
+      chip.addEventListener('click', () => {
+        settings.set('contactSort', value).catch(() => {});
+        renderList(); // the list changes at once; the choice is saved in the background
+      });
+      chips.append(chip);
+    });
+  }
+  chips.querySelectorAll('.chip').forEach((chip) => chip.setAttribute('aria-pressed', String(chip.dataset.sort === current)));
+}
+
 function renderList() {
+  renderSortChips();
   if (query) {
     renderSearch();
     return;

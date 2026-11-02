@@ -237,7 +237,12 @@ function openMenu(box, typed = '') {
   closeMenus();
   const group = [...GROUPS, RELATION_GROUP].find((g) => g.key === box.dataset.group);
   const wanted = foldText(typed.trim());
-  const options = labelOptions(group).filter((text) => !wanted || foldText(text).includes(wanted));
+  let options = labelOptions(group).filter((text) => !wanted || foldText(text).includes(wanted));
+  if (wanted && group.suggest) {
+    // Relationships: every known kind is suggested while typing, not only the ones in the menu.
+    const known = new Set(options.map(foldText));
+    options = [...group.suggest(typed.trim()).filter((text) => !known.has(foldText(text))), ...options].slice(0, 10);
+  }
   if (!options.length || (wanted && options.length === 1 && foldText(options[0]) === wanted)) return;
   const menu = make('ul', 'label-menu');
   options.forEach((text) => {
@@ -802,11 +807,23 @@ function continueQueue(id) {
   if (pendingDetails.length) askEditCreated(pendingDetails);
 }
 
+// After leaving the editor of an existing contact: contacts made from its relationship field are offered for editing, and so are
+// the ones still waiting from earlier (a contact made while editing a contact that was itself offered joins the same list).
+async function afterEdit(id) {
+  const kept = await relations.dropUnused().catch(() => []);
+  if (queueEditing === id) {
+    kept.forEach((item) => {
+      if (!pendingDetails.some((other) => other.id === item.id)) pendingDetails.push(item);
+    });
+    continueQueue(id);
+  } else if (kept.length) askEditCreated(kept);
+}
+
 function leaveEditor() {
   const id = contactId;
-  relations.dropUnused().catch(() => {});
   leaveTo(isNew ? cameFrom : `#/contact/${id}`);
-  if (!isNew) continueQueue(id);
+  if (isNew) relations.dropUnused().catch(() => {});
+  else afterEdit(id);
 }
 
 // "Yes, discard": put the contact back as it was when the editor opened.
@@ -976,9 +993,8 @@ async function finish(button) {
   const ok = dirty ? await save() : await queue.then(() => !birthdayProblem && !$('contact-status').classList.contains('is-error'));
   button.disabled = false;
   if (ok && !birthdayProblem) {
-    relations.dropUnused().catch(() => {});
     leaveTo(`#/contact/${id}`);
-    continueQueue(id);
+    afterEdit(id);
   }
 }
 
