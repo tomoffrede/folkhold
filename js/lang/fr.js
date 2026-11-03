@@ -14,6 +14,7 @@ export default {
   'home.upcomingEmpty': 'Rien de prévu pour l’instant.',
 
   'contacts.title': 'Contacts',
+  'contacts.sortBy': 'Trier par',
   'contacts.empty': 'Aucun contact pour l’instant.',
   'contacts.add': 'Ajouter un contact',
   'contacts.loading': 'Chargement…',
@@ -97,6 +98,9 @@ export default {
   'contact.month': 'Mois',
   'contact.year': 'Année',
   'contact.birthdayHint': 'L’année est facultative.',
+  'contact.birthdayPlaceholder': 'Anniversaire (p. ex. 14 mars, 14.3.1990)',
+  'contact.errBirthdayNeedDay': 'Un anniversaire demande un jour et un mois, par exemple « 14 mars ».',
+  'contact.errBirthdayFuture': 'Cet anniversaire est dans le futur.',
   'contact.birthdayIncomplete': 'Saisis un jour et un mois pour enregistrer l’anniversaire.',
   'contact.errBirthday': 'Cette date n’existe pas.',
   'contact.saving': 'Enregistrement…',
@@ -131,6 +135,10 @@ export default {
   'settings.sortTitle': 'Trier les contacts par',
   'settings.sortFirst': 'Prénom',
   'settings.sortLast': 'Nom',
+  'settings.dateOrderTitle': 'Ordre du jour et du mois dans les nombres',
+  'settings.dateOrderDmy': 'Jour d’abord (14/3/2024)',
+  'settings.dateOrderMdy': 'Mois d’abord, style américain (3/14/2024)',
+  'settings.dateOrderHint': 'Valable pour les dates saisies en chiffres, comme 5/3/2024. Si un ordre est impossible (par ex. 14/3 avec le mois d’abord), l’autre est utilisé.',
 
   'data.errDelete': 'Suppression impossible. Vérifie ta connexion et réessaie.',
   'data.errLoad': 'Impossible de charger tes données. Vérifie ta connexion et réessaie.',
@@ -155,6 +163,9 @@ export default {
   'upcoming.turns': '{name} a {age} ans',
 
   'settings.title': 'Réglages',
+  'settings.groupPrefs': 'Contacts, notes et dates',
+  'settings.groupAccount': 'Compte',
+  'settings.groupData': 'Données et application',
   'settings.account': 'Compte',
   'settings.signedInAs': 'Connecté en tant que',
   'settings.signOut': 'Se déconnecter',

@@ -169,7 +169,7 @@ body {
 .btn-secondary {
   flex: 1 1 0;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   background: var(--color-secondary);
   color: var(--color-on-secondary);
   font-size: 17px;
@@ -242,7 +242,7 @@ body {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   font-weight: 600;
 }
 
@@ -1053,7 +1053,7 @@ a.btn {
 /* Priority chips stay on one line, also on a narrow phone */
 .prio-row {
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .prio-label {
@@ -1692,6 +1692,16 @@ body.page-open #auth-root {
   background: var(--color-accent);
 }
 
+/* On a phone the four information links make two neat lines: two on each */
+@media (max-width: 599px) {
+  .legal-links {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+}
+
 /* Information links at the bottom of every screen (Settings has its own list) */
 .app-footer {
   margin-top: var(--space-6);
@@ -2087,9 +2097,6 @@ body.page-open #auth-root {
     margin-top: auto;
   }
 
-  .app-footer::before {
-    content: "";
-  }
 
   .auth-box {
     display: flex;
@@ -2217,19 +2224,122 @@ body.page-open #auth-root {
   overflow-wrap: anywhere;
 }
 
-/* Sort choice above the contact list */
-.sort-line {
+/* Sort choice next to the "Add contact" button */
+.screen-head {
+  flex-wrap: wrap;
+}
+
+.head-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  justify-content: space-between;
+  gap: 0 6px;
+  width: 100%;
+}
+
+.head-tools .btn {
+  padding-inline: 8px;
+}
+
+.sort-line {
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .sort-label {
   color: var(--color-muted);
-  font-size: 0.9rem;
 }
 
-.sort-line .chips {
-  margin: 0;
+.sort-links {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.sort-link {
+  padding: 8px 2px;
+  font-size: inherit;
+}
+
+.sort-link[aria-pressed="true"] {
+  color: var(--color-text);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Settings: collapsible groups */
+.setting-group {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+}
+
+.setting-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.setting-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.setting-group > summary::after {
+  content: "▾";
+  color: var(--color-muted);
+  transition: transform 0.15s;
+}
+
+.setting-group[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.setting-body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.setting-body > .setting:first-child,
+.setting-body > .account:first-child {
+  margin-top: 0;
+}
+
+.setting-body .setting {
+  margin-top: var(--space-5);
+}
+
+.setting-body .account {
+  margin-bottom: 0;
+}
+
+.setting-sub > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.setting-sub > summary::-webkit-details-marker {
+  display: none;
+}
+
+.setting-sub > summary::after {
+  content: "▾";
+}
+
+.setting-sub[open] > summary::after {
+  content: "▴";
 }

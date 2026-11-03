@@ -14,6 +14,7 @@ export default {
   'home.upcomingEmpty': 'Todavía no hay nada próximo.',
 
   'contacts.title': 'Contactos',
+  'contacts.sortBy': 'Ordenar por',
   'contacts.empty': 'Todavía no hay contactos.',
   'contacts.add': 'Añadir contacto',
   'contacts.loading': 'Cargando…',
@@ -97,6 +98,9 @@ export default {
   'contact.month': 'Mes',
   'contact.year': 'Año',
   'contact.birthdayHint': 'El año es opcional.',
+  'contact.birthdayPlaceholder': 'Cumpleaños (p. ej., 14 de marzo, 14.3.1990)',
+  'contact.errBirthdayNeedDay': 'Un cumpleaños necesita día y mes, por ejemplo «14 de marzo».',
+  'contact.errBirthdayFuture': 'Ese cumpleaños está en el futuro.',
   'contact.birthdayIncomplete': 'Escribe un día y un mes para guardar el cumpleaños.',
   'contact.errBirthday': 'Esa fecha no existe.',
   'contact.saving': 'Guardando…',
@@ -131,6 +135,10 @@ export default {
   'settings.sortTitle': 'Ordenar contactos por',
   'settings.sortFirst': 'Nombre',
   'settings.sortLast': 'Apellido',
+  'settings.dateOrderTitle': 'Orden del día y el mes en los números',
+  'settings.dateOrderDmy': 'Primero el día (14/3/2024)',
+  'settings.dateOrderMdy': 'Primero el mes, estilo EE. UU. (3/14/2024)',
+  'settings.dateOrderHint': 'Se usa para las fechas que escribes con números, como 5/3/2024. Si un orden es imposible (como 14/3 con el mes primero), se usa el otro.',
 
   'data.errDelete': 'No se pudo eliminar. Comprueba tu conexión e inténtalo de nuevo.',
   'data.errLoad': 'No se pudieron cargar tus datos. Comprueba tu conexión e inténtalo de nuevo.',
@@ -155,6 +163,9 @@ export default {
   'upcoming.turns': '{name} cumple {age}',
 
   'settings.title': 'Ajustes',
+  'settings.groupPrefs': 'Contactos, notas y fechas',
+  'settings.groupAccount': 'Cuenta',
+  'settings.groupData': 'Datos y aplicación',
   'settings.account': 'Cuenta',
   'settings.signedInAs': 'Sesión iniciada como',
   'settings.signOut': 'Cerrar sesión',

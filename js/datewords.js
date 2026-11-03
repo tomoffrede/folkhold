@@ -102,10 +102,11 @@ export const MODIFIERS = {
 const PART_WORDS = {
   early: ['beginning', 'start', 'inicio', 'comeco', 'principio', 'principios', 'inicios', 'comienzos', 'anfang', 'debut'],
   mid: ['middle', 'meio', 'meados', 'metade', 'mitte', 'milieu', 'mediados', 'mitad'],
-  late: ['end', 'fim', 'final', 'finais', 'ende', 'fin', 'finales', 'fines'],
+  late: ['end', 'fim', 'final', 'finais', 'ende', 'fin', 'finales', 'fines', 'fins'],
 };
 const RELATIVE = {
   today: 0, hoje: 0, heute: 0, "aujourd'hui": 0, hoy: 0,
+  now: 0, present: 0, ongoing: 0, jetzt: 0, maintenant: 0, agora: 0, ahora: 0, atualmente: 0, actualmente: 0, aktuell: 0,
   yesterday: -1, ontem: -1, gestern: -1, hier: -1, ayer: -1,
   tomorrow: 1, amanha: 1, morgen: 1, demain: 1, manana: 1,
   'day before yesterday': -2, vorgestern: -2, 'avant-hier': -2, 'avant hier': -2, anteayer: -2, 'antes de ayer': -2, anteontem: -2, 'antes de ontem': -2,

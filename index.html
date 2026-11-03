@@ -61,9 +61,12 @@
 </section>
 
 <section class="screen" data-screen="contacts" hidden>
-<div class="screen-head">
+<div class="screen-head contacts-head">
 <h2 class="section-title" data-text="contacts.title"></h2>
+<div class="head-tools">
+<span class="sort-line"><span class="sort-label" data-text="contacts.sortBy"></span> <span class="sort-links" id="contacts-sort"></span></span>
 <button type="button" class="btn btn-secondary btn-small" data-action="add-contact" data-text="contacts.add"></button>
+</div>
 </div>
 <p class="empty" id="contacts-status" hidden></p>
 <div class="search-line">
@@ -74,7 +77,6 @@
 <button type="button" class="btn btn-secondary btn-small filter-button" id="filter-button" aria-expanded="false" data-text="filter.button"></button>
 </div>
 <div class="tag-filter" id="contacts-filter" hidden></div>
-<div class="sort-line"><span class="sort-label" data-text="contacts.sortBy"></span><span class="chips" id="contacts-sort"></span></div>
 <ul class="people" id="contacts-list"></ul>
 <div id="search-results" hidden></div>
 <p class="empty" id="contacts-nomatch" data-text="contacts.noMatch" hidden></p>
@@ -103,11 +105,9 @@
 
 <section class="screen" data-screen="settings" hidden>
 <h2 class="section-title" data-text="settings.title"></h2>
-<div class="account">
-<p class="account-line"><span data-text="settings.signedInAs"></span> <strong id="settings-username"></strong></p>
-<button type="button" class="btn btn-secondary btn-small" data-action="sign-out" data-text="settings.signOut"></button>
-</div>
-
+<details class="setting-group" id="group-prefs" open>
+<summary data-text="settings.groupPrefs"></summary>
+<div class="setting-body">
 <div class="setting">
 <h3 class="group-title" data-text="settings.dateOrderTitle"></h3>
 <div class="choice">
@@ -123,7 +123,8 @@
 </div>
 
 <div class="setting">
-<h3 class="group-title" data-text="settings.fieldsTitle"></h3>
+<details class="setting-sub">
+<summary data-text="settings.fieldsTitle"></summary>
 <p class="hint" data-text="settings.fieldsHint"></p>
 <label class="check"><input type="checkbox" data-hide-field="emails" checked disabled><span data-text="settings.field.emails"></span></label>
 <label class="check"><input type="checkbox" data-hide-field="phones" checked disabled><span data-text="settings.field.phones"></span></label>
@@ -132,6 +133,7 @@
 <label class="check"><input type="checkbox" data-hide-field="birthday" checked disabled><span data-text="settings.field.birthday"></span></label>
 <label class="check"><input type="checkbox" data-hide-field="met" checked disabled><span data-text="settings.field.met"></span></label>
 <label class="check"><input type="checkbox" data-hide-field="relations" checked disabled><span data-text="settings.field.relations"></span></label>
+</details>
 </div>
 
 <div class="setting">
@@ -139,19 +141,28 @@
 <label class="check"><input type="checkbox" id="setting-priority" checked disabled><span data-text="settings.showPriority"></span></label>
 </div>
 
+</div>
+</details>
+
+<details class="setting-group" id="group-tags">
+<summary data-text="settings.tagsTitle"></summary>
+<div class="setting-body">
 <div class="setting">
-<h3 class="group-title" data-text="settings.tagsTitle"></h3>
 <p class="hint" id="settings-tags-empty" data-text="settings.tagsEmpty" hidden></p>
 <ul class="tag-manage" id="settings-tags"></ul>
 <p class="form-error" id="settings-message" role="alert" hidden></p>
 </div>
 
-<div class="setting">
-<h3 class="group-title" data-text="settings.dataTitle"></h3>
-<p class="hint" data-text="settings.exportHint"></p>
-<button type="button" class="btn btn-secondary btn-small" id="export-data" data-text="settings.export"></button>
 </div>
+</details>
 
+<details class="setting-group" id="group-account">
+<summary data-text="settings.groupAccount"></summary>
+<div class="setting-body">
+<div class="account setting">
+<p class="account-line"><span data-text="settings.signedInAs"></span> <strong id="settings-username"></strong></p>
+<button type="button" class="btn btn-secondary btn-small" data-action="sign-out" data-text="settings.signOut"></button>
+</div>
 <div class="setting">
 <h3 class="group-title" data-text="settings.passwordTitle"></h3>
 <button type="button" class="btn btn-secondary btn-small" id="password-open" data-text="settings.changePassword"></button>
@@ -173,13 +184,30 @@
 <select class="cond-select" id="language-select" data-label="lang.label"></select>
 </div>
 
+</div>
+</details>
+
+<details class="setting-group" id="group-data">
+<summary data-text="settings.groupData"></summary>
+<div class="setting-body">
+<div class="setting">
+<h3 class="group-title" data-text="settings.dataTitle"></h3>
+<p class="hint" data-text="settings.exportHint"></p>
+<button type="button" class="btn btn-secondary btn-small" id="export-data" data-text="settings.export"></button>
+</div>
+
 <div class="setting">
 <h3 class="group-title" data-text="settings.homeScreenTitle"></h3>
 <button type="button" class="btn btn-secondary btn-small" id="a2hs-settings" data-text="a2hs.open"></button>
 </div>
 
+</div>
+</details>
+
+<details class="setting-group" id="group-info">
+<summary data-text="settings.infoTitle"></summary>
+<div class="setting-body">
 <div class="setting">
-<h3 class="group-title" data-text="settings.infoTitle"></h3>
 <nav class="legal-links settings-links" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
 <a href="#/data-privacy" data-text="legal.dataPrivacy"></a>
@@ -187,6 +215,9 @@
 <a href="#/impressum" data-text="legal.impressum"></a>
 </nav>
 </div>
+
+</div>
+</details>
 
 <div class="setting danger">
 <button type="button" class="link link-danger" id="delete-open" data-text="settings.deleteAccount"></button>

@@ -146,6 +146,9 @@ export const strings = {
   'upcoming.turns': '{name} turns {age}',
 
   'settings.title': 'Settings',
+  'settings.groupPrefs': 'Contacts, notes and dates',
+  'settings.groupAccount': 'Account',
+  'settings.groupData': 'Data and app',
   'settings.account': 'Account',
   'settings.signedInAs': 'Signed in as',
   'settings.signOut': 'Sign out',

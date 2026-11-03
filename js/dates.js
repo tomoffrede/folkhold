@@ -245,7 +245,7 @@ function familyRead(raw) {
   }
 
   // Decades: "1990s", "the 90s", "in den 90ern", "années 90", "Ende der Neunziger", "early 90s"
-  m = s.match(/^(early|mid|late)?\s*(?:(annees|anos|years|jahre|decada|decade)\s+)?(?:(\d{4}|\d{2})\s*(s|er|ern|ers)?|([a-z]+))$/);
+  m = s.match(/^(early|mid|late)?[-\s]*(?:(annees|anos|years|jahre|decada|decade)\s+)?(?:(\d{4}|\d{2})\s*(s|er|ern|ers)?|([a-z]+))$/);
   if (m) {
     const [, part, word, digits, suffix, name] = m;
     if (name && DECADE_WORDS[name] !== undefined) return decade(part, DECADE_WORDS[name] >= 30 ? 1900 + DECADE_WORDS[name] : 2000 + DECADE_WORDS[name]);
@@ -402,8 +402,18 @@ function stripApprox(text) {
 
 // Everything that happens to the typed text before it is read: filler words, weekdays and times are dropped, "between X and Y" and
 // "5 and 6 March" become ranges, spacing and compact forms ("5 / 3 / 2024", "20240305", "5-Mar-2024") are tidied.
+const TIME_PARTS = /\b\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}(?:\s*(?:am|pm|uhr|h))?|(?:\b(?:at|um|a las|a la|as|a|à)\s+)?\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b(?:in the |this )?(?:morning|afternoon|evening|noon|midday|midnight)\b/g;
+const WEEKDAY_ONLY = Object.keys(WEEKDAYS).filter((w) => !MONTH_LOOKUP[w] && w.length >= 3).sort((a, b) => b.length - a.length).join('|');
+const WEEKDAY_SPAN = new RegExp(`\\(\\s*(?:${WEEKDAY_ONLY})\\s*(?:-|to|bis|au|a|al|ao)\\s*(?:${WEEKDAY_ONLY})\\s*\\)|\\b(?:${WEEKDAY_ONLY})\\.?\\s*(?:-|to|bis|au|a|al|ao)\\s*(?:${WEEKDAY_ONLY})\\b\\.?`, 'g');
+
 function prepare(typed) {
-  const folded = fold(typed).trim();
+  const folded = fold(typed)
+    .replace(TIME_PARTS, ' ')
+    .replace(WEEKDAY_SPAN, ' ')
+    .replace(/\s+(?:inclusive|inclusif|inclus|inklusive|einschliesslich|incluido|incluso|inclusivo|inclusiva)\b/g, '')
+    .replace(/^(?:all\s+through|throughout|durante|during)\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   const bare = folded.replace(/^(?:the|el|le|la|lo)\s+/, '');
   if (relativeDayOf(bare) !== undefined) return { rel: parseSingle(bare), text: bare, approx: false };
   const rel = relativeRead(folded);
@@ -424,6 +434,10 @@ function prepare(typed) {
     .replace(/\s+/g, ' ')
     .replace(/^[,;\s]+|[,;\s]+$/g, '');
   if (between) text = text.replace(/ (?:and|und|et|y|e) /, ' - ');
+  text = text.replace(/^([a-z]{3,})\.?\/([a-z]{3,})\.?(?= |$)/, (all, x, y) => (MONTH_LOOKUP[x] && MONTH_LOOKUP[y] ? `${x} - ${y}` : all)); // "Nov/Dec 2026"
+  text = text.replace(/^([a-z]{3,})\.? (\d{1,2}) (?:and|und|et|y|e|&|\+) (\d{1,2})(,?(?: .*)?)$/, (all, x, a, b, rest) => (MONTH_LOOKUP[x] ? `${x} ${a} - ${b}${rest}` : all)); // "Nov 20 & 21, 2026"
+  text = text.replace(/^(\d{2}|\d{4})(?:s|er|ern|ers)? (?:and|&|und|et|y|e|\/) (\d{2}|\d{4})(s|er|ern|ers)$/, '$1$3 - $2$3'); // "the 80s and 90s"
+  text = text.replace(/^(\d{4}-\d{2})\/(\d{4}-\d{2})$/, '$1 - $2'); // "2026-11/2027-02"
   text = text.replace(/^(\d{1,2})\.?\s*(?:and|und|et|y|e|&|\+|\/)\s*(?=(\d{1,2})\s+([a-z]+))/, (all, day, n, word) => (MONTH_LOOKUP[word] ? `${day} - ` : all)); // "5 and 6 March", "5./6. März"
 
   if (/^[\d\s./-]+$/.test(text)) {
@@ -477,13 +491,43 @@ function rangeLabel(left, right, long) {
   return `${left.label(long)}–${right.label(long)}`;
 }
 
+// "3 days from Nov 20 2026", "Nov 20 2026 for 3 days", "5 nights from 1 March 2024": a start date and how long it lasts.
+function durationRead(s) {
+  let n;
+  let unit;
+  let start;
+  let m = s.match(/^(?:for\s+)?(\d{1,2}|[a-z]+)\s+(day|night|week)s?\s+(?:from|starting|beginning)\s+(.+)$/);
+  if (m) [, n, unit, start] = m;
+  else {
+    m = s.match(/^(.+?)\s+for\s+(\d{1,2}|[a-z]+)\s+(day|night|week)s?$/);
+    if (!m) return null;
+    [, start, n, unit] = m;
+  }
+  n = /^\d+$/.test(n) ? +n : NUMBER_WORDS[n];
+  if (!n) return null;
+  const first = parseDate(start);
+  if (first.error || !first.date.from || first.date.from !== first.date.to) return null;
+  const days = unit === 'week' ? 7 * n - 1 : unit === 'night' ? n : n - 1;
+  return days ? parseDate(`${first.date.from} - ${addDays(first.date.from, days)}`) : first;
+}
+
 // Reads typed text. Returns { error: 'empty' | 'unknown' | 'invalid' | 'needYear' }
 // or { date, reading, exact, yearly }, where "reading" is how the app understood it, e.g. "Mid March 2024 (~11–20 March)".
 export function parseDate(input) {
   const typed = String(input || '').trim();
   if (!typed) return { error: 'empty' };
-  const { rel, text, approx } = prepare(typed);
-  if (!text) return { error: 'unknown' };
+  const timed = durationRead(fold(typed));
+  if (timed) return timed;
+  const { rel, text: prepared, approx } = prepare(typed);
+  if (!prepared) return { error: 'unknown' };
+  // "winter 2023/24 to spring 2024": a winter is named by the year it starts in.
+  const text = prepared.replace(/\b([a-z]+)\s+(\d{4})\s*[-/]\s*(\d{2})(?!\d)/g, (all, w, y1, y2) => (SEASONS[w] === 'Winter' && +y2 === (+y1 + 1) % 100 ? `${w} ${y1}` : all));
+  // "week of March 4 2024": that week, Monday to Sunday.
+  const wk = text.match(/^(?:week|woche|semaine|semana)\s+(?!\d{1,2}(?:\s+\d{4})?$)(?:(?:starting|beginning|commencing|ab)\s+)?(.+)$/);
+  if (wk) {
+    const inner = parseDate(wk[1]);
+    if (!inner.error && inner.date.from && inner.date.from === inner.date.to) return parseDate(`${inner.date.from} - ${addDays(inner.date.from, 6)}`);
+  }
 
   let single = rel || parseSingle(text);
   let range = null;
@@ -514,6 +558,11 @@ export function parseDate(input) {
     // "Nov 7 - 17, 2026" and "November 7-17": the right half is only a day (and maybe the year), the month comes from the left.
     const dayOnly = cut.length === 2 && /^[a-z]+\.?\s*\d{1,2}$/.test(cut[0]) && cut[1].match(/^(\d{1,2})(?:[\s,]+(\d{4}))?$/);
     if (dayOnly) cut[1] = `${cut[0].replace(/\d{1,2}$/, dayOnly[1])}${dayOnly[2] ? ` ${dayOnly[2]}` : ''}`;
+    // "mid - late nov 2026", "early to mid 2024": the left half is only a word like mid, the month and year come from the right half.
+    if (cut.length === 2 && /^(?:early|mid|late)$/.test(cut[0])) {
+      const tail = cut[1].replace(/^(?:early|mid|late)[-\s]*/, '');
+      if (tail) cut[0] = `${cut[0]} ${tail}`;
+    }
     // A short year on the right half: "2019-21" and "june-august 22".
     if (cut.length === 2 && /^\d{2}$/.test(cut[1]) && /^\d{4}$/.test(cut[0])) cut[1] = String(Math.floor(+cut[0] / 100) * 100 + +cut[1]);
     const short = cut.length === 2 && cut[1].match(/^([a-z]+)\s+(\d{2})$/);
@@ -533,7 +582,11 @@ export function parseDate(input) {
         left = parseSingle(withYear(cut[0], right.y));
         if (!left.error && left.m > right.m) left = parseSingle(withYear(cut[0], right.y - 1));
       }
-      else if (bare(right) && left.y) right = parseSingle(withYear(cut[1], left.y)); // "20 oct 2026 - 17 nov"
+      else if (bare(right) && left.y) {
+        // "20 oct 2026 - 17 nov"; "28 dec 2025 - 2 jan" ends in the next year.
+        right = parseSingle(withYear(cut[1], left.y));
+        if (!right.error && left.from && right.from < left.from) right = parseSingle(withYear(cut[1], left.y + 1));
+      }
       if (!left.error && !right.error && left.from && right.from) {
         if (left.from <= right.to) range = { left, right };
         else return { error: 'invalid' };

@@ -308,7 +308,7 @@ function renderSortChips() {
   const current = settings.get('contactSort');
   if (!chips.children.length) {
     ['first', 'last'].forEach((value) => {
-      const chip = el('button', 'chip prio-chip', strings[value === 'first' ? 'settings.sortFirst' : 'settings.sortLast']);
+      const chip = el('button', 'link sort-link', strings[value === 'first' ? 'settings.sortFirst' : 'settings.sortLast']);
       chip.type = 'button';
       chip.dataset.sort = value;
       chip.addEventListener('click', () => {
@@ -318,7 +318,7 @@ function renderSortChips() {
       chips.append(chip);
     });
   }
-  chips.querySelectorAll('.chip').forEach((chip) => chip.setAttribute('aria-pressed', String(chip.dataset.sort === current)));
+  chips.querySelectorAll('.sort-link').forEach((chip) => chip.setAttribute('aria-pressed', String(chip.dataset.sort === current)));
 }
 
 function renderList() {
