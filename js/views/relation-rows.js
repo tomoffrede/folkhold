@@ -4,6 +4,7 @@ import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as relations from '../relations.js';
+import { handleDropKeys } from '../dropnav.js';
 import { collapsible } from './section.js';
 
 const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
@@ -151,13 +152,10 @@ function personField(row, entry, selfId, defer) {
     if (person.value.trim() && !row.dataset.state) showMenu(row, selfId, defer);
   });
   person.addEventListener('keydown', (event) => {
-    const options = [...row.querySelectorAll('.rel-menu .label-option')];
+    if (handleDropKeys(event, () => [...row.querySelectorAll('.rel-menu .label-option')], () => person.value.trim() && showMenu(row, selfId, defer))) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       if (person.value.trim()) choose(row, { type: 'name', name: person.value.trim() }, defer);
-    } else if (event.key === 'ArrowDown' && options.length) {
-      event.preventDefault();
-      options[0].focus();
     } else if (event.key === 'Escape') closeMenu(row);
   });
   field.addEventListener('keydown', (event) => {

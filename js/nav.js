@@ -29,18 +29,25 @@ export function leave(dest) {
   else location.replace(dest);
 }
 
+// The "← Back" links: back to the page that was shown before this one, whatever it was.
+// Only when this is the first page of the visit (a reload, a bookmark) does it go to `fallback`.
+export function goBack(fallback) {
+  if (index > 0) history.back();
+  else location.replace(fallback);
+}
+
 export function initNav() {
   const state = history.state;
   index = state && typeof state.idx === 'number' ? state.idx : 0;
   history.replaceState({ idx: index }, '');
   pages[index] = location.hash;
   window.addEventListener('hashchange', stamp);
-  // Every "← Back" style link goes through leave().
+  // Every "← Back" style link goes through goBack().
   document.addEventListener('click', (event) => {
     const link = event.target.closest && event.target.closest('a.back');
     if (!link || link.id === 'pages-back') return;
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; // open in a new tab as usual
     event.preventDefault();
-    leave(link.getAttribute('href'));
+    goBack(link.getAttribute('href'));
   });
 }

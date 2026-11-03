@@ -1,7 +1,7 @@
 // The information pages (About, Data privacy explained, Privacy policy, Impressum).
 // They can be opened before signing in, so they sit outside the app and the sign-in screens: #/about, #/data-privacy, #/privacy, #/impressum
 
-import { leave } from '../nav.js';
+import { goBack } from '../nav.js';
 import { strings } from '../strings.js';
 import { PAGES } from '../pages.js';
 import { PAGES_DE } from '../pages-de.js';
@@ -128,7 +128,7 @@ function update(event) {
 export function initPages() {
   $('pages-back').addEventListener('click', (event) => {
     event.preventDefault();
-    leave(backTo || '#/home');
+    goBack(backTo || '#/home');
   });
   window.addEventListener('hashchange', update);
   update(null);

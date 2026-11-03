@@ -6,6 +6,7 @@ import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import { displayName } from './contacts.js';
+import { handleDropKeys } from '../dropnav.js';
 
 const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
 
@@ -130,6 +131,7 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
   // A short delay, so that tapping an option (or the arrow) still counts before the list closes.
   input.addEventListener('blur', () => setTimeout(closeMenu, 200));
   input.addEventListener('keydown', (event) => {
+    if (handleDropKeys(event, () => [...menu.querySelectorAll('.picker-option')], openMenu)) return;
     if (event.key === 'Escape') {
       closeMenu();
     } else if (event.key === 'Enter') {

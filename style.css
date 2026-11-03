@@ -2343,3 +2343,9 @@ body.page-open #auth-root {
 .setting-sub[open] > summary::after {
   content: "▴";
 }
+
+/* The option highlighted with the arrow keys in any dropdown list */
+.label-option.is-active {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+}

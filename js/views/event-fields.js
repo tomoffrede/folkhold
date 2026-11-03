@@ -44,7 +44,7 @@ function helpOpenNow() {
 
 export function createEventFields({ title = '', details = '', date = null, repeat = false, kind, onChange = () => {} } = {}) {
   const element = make('div', 'form');
-  let who = kind === undefined ? remembered('folkhold-lastkind', 'life') : kind === 'together' ? 'together' : 'life';
+  let who = kind === 'together' ? 'together' : 'life'; // always "their life" unless told otherwise
   let repeating = Boolean(repeat);
   let name = '';
 
@@ -64,7 +64,6 @@ export function createEventFields({ title = '', details = '', date = null, repea
     button.type = 'button';
     button.addEventListener('click', () => {
       who = value;
-      if (kind === undefined) remember('folkhold-lastkind', value);
       refreshWho();
       onChange();
     });

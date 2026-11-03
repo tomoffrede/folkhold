@@ -25,6 +25,7 @@ import { locale } from '../lang.js';
 import * as relations from '../relations.js';
 import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection } from './relation-rows.js';
 import { personIcon } from './icons.js';
+import { handleDropKeys } from '../dropnav.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -261,7 +262,10 @@ function toggleMenu(button) {
   const box = button.closest('.label-box');
   const wasOpen = Boolean(box.querySelector('.label-menu'));
   if (wasOpen) closeMenus();
-  else openMenu(box);
+  else {
+    openMenu(box);
+    box.querySelector('.entry-label').focus(); // the cursor goes into the field, ready for typing
+  }
 }
 
 function pickLabel(option) {
@@ -1073,6 +1077,20 @@ function bindPage() {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeMenus();
+  });
+  // Tapping or tabbing into a label field shows its list at once.
+  const showOnEnter = (event) => {
+    if (!event.target.classList || !event.target.classList.contains('entry-label')) return;
+    const box = event.target.closest('.label-box');
+    if (!box.querySelector('.label-menu')) openMenu(box);
+  };
+  page.addEventListener('focusin', showOnEnter);
+  page.addEventListener('click', showOnEnter);
+  // Arrows move through an open label menu and Enter picks the highlighted label.
+  page.addEventListener('keydown', (event) => {
+    if (!event.target.classList.contains('entry-label')) return;
+    const box = event.target.closest('.label-box');
+    handleDropKeys(event, () => [...box.querySelectorAll('.label-option')], () => openMenu(box, event.target.value));
   });
 }
 

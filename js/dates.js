@@ -488,6 +488,12 @@ function rangeLabel(left, right, long) {
   if (left.kind === 'exact' && right.kind === 'exact' && left.y === right.y && left.m === right.m) {
     return `${dayRange(left.d, right.d, left.m, long)}${yearJoin(long)}${left.y}`;
   }
+  // The same year on both sides is written once, at the end: "28 Oct–8 Nov 2026".
+  const dated = (d) => (d.kind === 'exact' || (d.kind === 'month' && !d.part)) && d.y;
+  if (dated(left) && dated(right) && left.y === right.y) {
+    const bit = (d) => (d.kind === 'exact' ? dayMonth(d.d, d.m, long) : monthName(d.m, long));
+    return `${bit(left)}–${bit(right)}${yearJoin(long)}${right.y}`;
+  }
   return `${left.label(long)}–${right.label(long)}`;
 }
 
