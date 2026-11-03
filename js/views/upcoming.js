@@ -60,12 +60,14 @@ export function collect(limitDays, today = startOfToday()) {
       ts = new Date(turning, b.month - 1, Math.min(b.day, daysInMonth(b.month, turning))).getTime();
     }
     if (ts > end) return;
+    const full = displayName(contact);
+    const short = contact.firstName || contact.nickname || full; // the title uses the first name; the full name goes underneath
     items.push({
       ts,
       exact: true,
       birthday: true,
-      title: b.year ? t('upcoming.turns', { name: displayName(contact), age: turning - b.year }) : t('upcoming.birthday', { name: displayName(contact) }),
-      names: '',
+      title: b.year ? t('upcoming.turns', { name: short, age: turning - b.year }) : t('upcoming.birthday', { name: short }),
+      names: full !== short ? full : '',
       href: `#/contact/${contact.id}`,
     });
   });
