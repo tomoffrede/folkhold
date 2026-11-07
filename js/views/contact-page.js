@@ -938,6 +938,13 @@ function askEditCreated(list) {
   panel.append(actions);
 }
 
+// An existing contact with the same first and last name (ignoring capitals and accents). Needs both names to be filled in.
+function sameNameContact(fields) {
+  if (!fields.firstName || !fields.lastName) return null;
+  const fold = (text) => String(text || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return store.list('contact').find((other) => fold(other.firstName) === fold(fields.firstName) && fold(other.lastName) === fold(fields.lastName)) || null;
+}
+
 async function saveNew(button) {
   showNewError('');
   const { fields, problem } = readFields();
@@ -954,6 +961,19 @@ async function saveNew(button) {
   if (badEvent) {
     showNewError(strings[`event.err.${badEvent.problem || 'empty'}`]);
     return;
+  }
+  // The same first and last name as a contact that already exists: ask before making what looks like a copy.
+  if (!newId) {
+    const same = sameNameContact(fields);
+    if (same) {
+      const yes = await confirmModal({
+        text: t('contact.duplicateText', { name: displayName(same) }),
+        yes: strings['contact.duplicateYes'],
+        no: strings['contact.duplicateNo'],
+        danger: false,
+      });
+      if (!yes) return;
+    }
   }
   // A pending event that is really this person's birthday becomes their birthday detail.
   let movedBirthday = null;
