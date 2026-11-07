@@ -44,6 +44,15 @@ export async function saveEdit(type, item, managed, values, originId, appliedIds
   await store.update(type, item.id, fields);
 }
 
+// Adds contacts to an item that already exists. They share it from now on.
+export async function addContacts(type, id, contactIds) {
+  const item = store.get(type, id);
+  if (!item) return;
+  const all = [...new Set([...(item.contactIds || []), ...contactIds])];
+  if (all.length === (item.contactIds || []).length) return;
+  await store.update(type, id, { ...fieldsOf(item), contactIds: all });
+}
+
 // Takes some contacts off an item. If nobody is left, the item is deleted.
 export async function removeFromContacts(type, item, contactIds) {
   const rest = (item.contactIds || []).filter((id) => !contactIds.includes(id));

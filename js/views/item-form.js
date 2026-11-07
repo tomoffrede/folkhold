@@ -19,6 +19,7 @@ import * as birthdays from '../birthdays.js';
 import { formatDate } from '../dates.js';
 import { showToast } from './toast.js';
 import { openModal, confirmModal } from './modal.js';
+import { primeKeyboard, focusSoon } from '../keyboard.js';
 
 const $ = (id) => document.getElementById(id);
 const ID = '([0-9a-f-]+)';
@@ -227,8 +228,7 @@ function buildNew(page, route) {
     syncNames();
   });
 
-  if (preselected.length) fields.focus();
-  else picker.element.querySelector('input').focus();
+  focusSoon(() => (preselected.length ? fields.focus() : picker.element.querySelector('input').focus()));
 }
 
 // ---------- editing ----------
@@ -255,6 +255,12 @@ function buildEdit(page, route, note, contact) {
 
   const fields = kind.makeFields({ ...original, onChange: keepDraft });
   if (fields.setName) fields.setName(shortName(contact));
+  // More contacts can be added to the item here; the ones it already has are not offered again.
+  const picker = createPicker({ onlyMore: true, exclude: note.contactIds || [] });
+  const addMore = async () => {
+    const extra = picker.getSelected();
+    if (extra.length) await kind.api.addContacts(note.id, extra);
+  };
   const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', S(route.kind, 'save'));
   save.type = 'button';
@@ -264,6 +270,7 @@ function buildEdit(page, route, note, contact) {
   slot.id = 'draft-slot';
   formWrap.append(slot, linkedLine(T(route.kind, 'forLine', { name: '\u0000' }), [contact]));
   if (others.length) formWrap.append(linkedLine(t('notes.alsoOn', { names: '\u0000' }), others));
+  formWrap.append(picker.element);
   const promptWrap = make('div');
   promptWrap.hidden = true;
   formWrap.append(fields.element, error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));
@@ -274,10 +281,14 @@ function buildEdit(page, route, note, contact) {
       const changes = fields.get();
       const mistake = kind.problem(changes);
       if (mistake) return showError(error, mistake);
-      if (!isChanged(changes)) return finish(route);
+      if (!isChanged(changes)) {
+        await addMore();
+        return finish(route);
+      }
       if (others.length === 0) {
         if (await moveBirthday(route, changes, contact, note)) return;
         await kind.api.saveEdit(note, kind.pick(changes), route.contactId, []);
+        await addMore();
         return finish(route);
       }
       showChoice({
@@ -289,6 +300,7 @@ function buildEdit(page, route, note, contact) {
         others,
         onConfirm: async (applied) => {
           await kind.api.saveEdit(note, kind.pick(changes), route.contactId, applied);
+          await addMore();
           finish(route);
         },
       });
@@ -423,6 +435,7 @@ export function initNoteForm() {
   ['note', 'event'].forEach((kind) => {
     document.querySelectorAll(`[data-action="add-${kind}"]`).forEach((el) => {
       el.addEventListener('click', () => {
+        primeKeyboard();
         location.hash = `#/add-${kind}`;
       });
     });

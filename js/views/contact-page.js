@@ -26,6 +26,8 @@ import * as relations from '../relations.js';
 import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection } from './relation-rows.js';
 import { personIcon } from './icons.js';
 import { handleDropKeys } from '../dropnav.js';
+import { primeKeyboard, focusSoon } from '../keyboard.js';
+import { createPicker } from './contact-picker.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -536,6 +538,7 @@ function render() {
   }
   if (editing) renderEditor(page, contact);
   else renderView(page, contact);
+  if (isNew) focusSoon(() => { const first = page.querySelector('[data-field="firstName"]'); if (first) first.focus(); });
 }
 
 // ---------- reading the editor and saving ----------
@@ -696,6 +699,7 @@ function addEntry(key) {
     return;
   }
   if ((key === 'note' || key === 'event') && !isNew) {
+    primeKeyboard();
     goTo(`#/add-${key}/${contactId}`); // an existing contact: the full note or event form (typing here is saved first)
     return;
   }
@@ -734,7 +738,8 @@ function addPendingNote() {
   remove.setAttribute('aria-label', strings['contact.removeNote']);
   head.append(remove);
   const fields = createNoteFields();
-  block.append(head, fields.element);
+  block.picker = createPicker({ onlyMore: true });
+  block.append(head, block.picker.element, fields.element);
   block.noteFields = fields;
   $('pending-notes').append(block);
   fields.focus();
@@ -751,7 +756,8 @@ function addPendingEvent() {
   remove.setAttribute('aria-label', strings['contact.removeEvent']);
   head.append(remove);
   const fields = createEventFields();
-  block.append(head, fields.element);
+  block.picker = createPicker({ onlyMore: true }); // the event can belong to other contacts as well
+  block.append(head, block.picker.element, fields.element);
   block.eventFields = fields;
   $('pending-notes').append(block);
   block.eventFields.setName(shortName(typedName()));
@@ -934,12 +940,12 @@ async function saveNew(button) {
     // A note or event that was saved before a failure is marked, so pressing Save again does not make it twice.
     for (const n of list) {
       if (n.block.dataset.saved) continue;
-      await notes.create({ title: n.title, body: n.body, priority: n.priority, contactIds: [newId] });
+      await notes.create({ title: n.title, body: n.body, priority: n.priority, contactIds: [newId, ...n.block.picker.getSelected()] });
       n.block.dataset.saved = '1';
     }
     for (const e of eventList) {
       if (e.block.dataset.saved) continue;
-      await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId] });
+      await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId, ...e.block.picker.getSelected()] });
       e.block.dataset.saved = '1';
     }
     leaveTo(`#/contact/${newId}`);

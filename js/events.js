@@ -31,6 +31,10 @@ export function saveEdit(event, { title, details, date, repeat, kind }, originId
   return linked.saveEdit('event', event, MANAGED, { title, details, date, repeat, kind: kind === 'together' ? 'together' : '' }, originId, appliedIds);
 }
 
+export function addContacts(id, contactIds) {
+  return linked.addContacts('event', id, contactIds);
+}
+
 export function removeFromContacts(event, contactIds) {
   return linked.removeFromContacts('event', event, contactIds);
 }

@@ -53,6 +53,10 @@ export function saveEdit(note, { title, body, priority }, originId, appliedIds) 
   return linked.saveEdit('note', note, ['title', 'body', 'priority'], { title, body, priority }, originId, appliedIds);
 }
 
+export function addContacts(id, contactIds) {
+  return linked.addContacts('note', id, contactIds);
+}
+
 export function removeFromContacts(note, contactIds) {
   return linked.removeFromContacts('note', note, contactIds);
 }

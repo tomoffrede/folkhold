@@ -1,5 +1,6 @@
 // The contacts list and the quick-add form.
 
+import { primeKeyboard } from '../keyboard.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as settings from '../settings.js';
@@ -379,6 +380,7 @@ async function load() {
 export function initContacts() {
   document.querySelectorAll('[data-action="add-contact"]').forEach((el) => {
     el.addEventListener('click', () => {
+      primeKeyboard();
       location.hash = '#/add-contact';
     });
   });

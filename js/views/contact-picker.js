@@ -1,6 +1,8 @@
 // Chooses contacts: type to search (first name, last name or nickname) or tap the field to see them all.
 // createPicker({ selected, locked, onChange }) returns { element, getSelected() }.
 //   locked: a contact id that stays selected and cannot be removed
+//   exclude: contact ids that are not offered (already part of the item)
+//   onlyMore: the field always says "Add another contact..." (for items that already belong to a contact)
 
 import { locale } from '../lang.js';
 import { strings, t } from '../strings.js';
@@ -22,7 +24,7 @@ function fold(text) {
   return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-export function createPicker({ selected = [], locked = null, onChange = () => {} }) {
+export function createPicker({ selected = [], locked = null, onChange = () => {}, onlyMore = false, exclude = [] }) {
   const ids = [...selected];
   const element = make('div', 'picker');
   const chips = make('div', 'picker-chips');
@@ -67,14 +69,14 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
       chips.append(chip);
     });
     chips.hidden = ids.length === 0;
-    input.placeholder = strings[ids.length ? 'note.pickerMore' : 'note.pickerFirst'];
+    input.placeholder = strings[ids.length || onlyMore ? 'note.pickerMore' : 'note.pickerFirst'];
   }
 
   function matches() {
     const words = fold(input.value).split(/\s+/).filter(Boolean);
     return store
       .list('contact')
-      .filter((contact) => !ids.includes(contact.id))
+      .filter((contact) => !ids.includes(contact.id) && !exclude.includes(contact.id))
       .filter((contact) => {
         const text = fold([contact.firstName, contact.lastName, contact.nickname].filter(Boolean).join(' '));
         return words.every((word) => text.includes(word));
