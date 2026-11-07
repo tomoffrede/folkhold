@@ -2349,3 +2349,9 @@ body.page-open #auth-root {
   background: var(--color-secondary);
   color: var(--color-on-secondary);
 }
+
+/* "Met through": one person field; its suggestions open right under it */
+.through-entry {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) 44px; /* the person field and the remove button (no label column) */
+}
