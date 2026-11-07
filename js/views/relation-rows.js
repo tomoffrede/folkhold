@@ -239,6 +239,42 @@ export function readRelations(page) {
   return list;
 }
 
+// ---------- "met through" ----------
+
+// One person field (an existing contact, just a name, or a new contact) and a remove button.
+export function metThroughRow(entry = {}, selfId = null, defer = false) {
+  const row = make('div', 'entry through-entry');
+  personField(row, entry, selfId, defer);
+  const remove = make('button', 'entry-remove', '×');
+  remove.type = 'button';
+  remove.dataset.act = 'remove-through';
+  remove.setAttribute('aria-label', strings['contact.remove']);
+  row.append(remove);
+  return row;
+}
+
+export function metThroughBlock(contact, defer) {
+  const block = make('div', 'group');
+  block.dataset.group = 'metThrough';
+  const list = make('div', 'entries');
+  const through = relations.throughOf(contact);
+  if (through) list.append(metThroughRow(through, contact.id, defer));
+  block.hidden = !through;
+  block.append(make('h3', 'group-title', strings['contact.metThroughTitle']), list);
+  return block;
+}
+
+// What the editor has: { contactId }, { name } or { name, create: true }; null when empty or closed.
+export function readMetThrough(page) {
+  const block = page.querySelector('[data-group="metThrough"]');
+  const row = block && !block.hidden ? block.querySelector('.through-entry') : null;
+  if (!row) return null;
+  const text = row.querySelector('.rel-person').value.trim();
+  if (!text) return null;
+  if (row.dataset.state === 'contact' && row.dataset.contactId) return { contactId: row.dataset.contactId };
+  return row.dataset.state === 'create' ? { name: text, create: true } : { name: text };
+}
+
 // ---------- the read-only section ----------
 
 export function renderRelationsSection(contact, refresh) {

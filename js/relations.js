@@ -112,7 +112,7 @@ export async function dropUnused() {
     if (!contact) continue;
     const edited = Object.keys(contact).some((key) => !['id', 'firstName', 'lastName'].includes(key));
     const used =
-      store.list('contact').some((other) => (other.relations || []).some((rel) => rel.contactId === id)) ||
+      store.list('contact').some((other) => (other.relations || []).some((rel) => rel.contactId === id) || (other.metThrough && other.metThrough.contactId === id)) ||
       store.list('note').some((note) => (note.contactIds || []).includes(id)) ||
       store.list('event').some((event) => (event.contactIds || []).includes(id));
     if (!edited && !used) await store.remove('contact', id);
@@ -199,9 +199,32 @@ export async function materialize(list) {
   return { list: result, created };
 }
 
+// "Met through": who introduced this contact, as { name } or { contactId }. Gives { name, contactId? } with the current name, or null.
+export function throughOf(contact) {
+  const through = contact.metThrough;
+  if (!through) return null;
+  const target = through.contactId ? store.get('contact', through.contactId) : null;
+  if (target) return { contactId: target.id, name: nameOf(target) };
+  return through.name ? { name: through.name } : null;
+}
+
+// The contacts that were introduced by this one, sorted by name.
+export function introducedBy(contact) {
+  return store
+    .list('contact')
+    .filter((other) => other.metThrough && other.metThrough.contactId === contact.id)
+    .map((other) => ({ id: other.id, name: nameOf(other) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // A contact is about to be deleted: relationships to them stay, as plain names.
 export async function detachContact(contact) {
   const deletedName = nameOf(contact);
+  for (const other of store.list('contact')) {
+    if (other.id !== contact.id && other.metThrough && other.metThrough.contactId === contact.id) {
+      await store.update('contact', other.id, { ...withoutId(other), metThrough: { name: deletedName } });
+    }
+  }
   for (const other of store.list('contact')) {
     if (other.id === contact.id) continue;
     const list = other.relations || [];

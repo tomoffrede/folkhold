@@ -23,7 +23,7 @@ import { displayName, filterByTag } from './contacts.js';
 import { confirmModal, openModal } from './modal.js';
 import { locale } from '../lang.js';
 import * as relations from '../relations.js';
-import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection } from './relation-rows.js';
+import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection, metThroughBlock, metThroughRow, readMetThrough } from './relation-rows.js';
 import { personIcon } from './icons.js';
 import { handleDropKeys } from '../dropnav.js';
 import { primeKeyboard, focusSoon } from '../keyboard.js';
@@ -41,7 +41,7 @@ const GROUPS = [
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
-const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'relations', ...GROUPS.map((group) => group.key)];
+const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'metThrough', 'relations', ...GROUPS.map((group) => group.key)];
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
 let contactId = null;
@@ -149,10 +149,35 @@ function renderView(page, contact) {
     block.append(make('h3', 'group-title', strings['contact.birthday']), infoItem('', make('span', 'info-value', formatBirthday(contact.birthday))));
     details.bodyEl.append(block);
   }
-  if (contact.met) {
+  const through = relations.throughOf(contact);
+  if (contact.met || through) {
     previewParts.push(strings['contact.met']);
     const block = make('div', 'group');
-    block.append(make('h3', 'group-title', strings['contact.met']), infoItem('', make('span', 'info-value', formatDate(contact.met))));
+    const value = make('span', 'info-value');
+    if (contact.met) value.append(formatDate(contact.met));
+    if (through) {
+      value.append(`${contact.met ? ' · ' : ''}${strings['contact.through']} `);
+      if (through.contactId) {
+        const link = make('a', 'info-link', through.name);
+        link.href = `#/contact/${through.contactId}`;
+        value.append(link);
+      } else value.append(through.name);
+    }
+    block.append(make('h3', 'group-title', strings['contact.met']), infoItem('', value));
+    details.bodyEl.append(block);
+  }
+  const introduced = relations.introducedBy(contact);
+  if (introduced.length) {
+    previewParts.push(strings['contact.introduced']);
+    const block = make('div', 'group');
+    const value = make('span', 'info-value');
+    introduced.forEach((other, index) => {
+      if (index) value.append(', ');
+      const link = make('a', 'info-link', other.name);
+      link.href = `#/contact/${other.id}`;
+      value.append(link);
+    });
+    block.append(make('h3', 'group-title', strings['contact.introduced']), infoItem('', value));
     details.bodyEl.append(block);
   }
   GROUPS.forEach((group) => {
@@ -450,6 +475,13 @@ function renderEditor(page, contact) {
   relationChip.append(personIcon(2), strings['contact.chipRelation']);
   if (hiddenFields.includes('relations')) relationChip.dataset.off = '1';
   relationRowChips.append(relationChip);
+  const throughChip = make('button', 'chip chip-relation');
+  throughChip.type = 'button';
+  throughChip.dataset.add = 'metThrough';
+  throughChip.append(personIcon(1), strings['contact.chipThrough']);
+  throughChip.hidden = Boolean(contact.metThrough);
+  if (hiddenFields.includes('met')) throughChip.dataset.off = '1';
+  relationRowChips.append(throughChip);
   {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
@@ -470,7 +502,7 @@ function renderEditor(page, contact) {
 
   page.append(head, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
-  page.append(birthdayBlock(contact.birthday), metBlock(contact.met), relationBlock(contact, isNew));
+  page.append(birthdayBlock(contact.birthday), metBlock(contact.met), metThroughBlock(contact, isNew), relationBlock(contact, isNew));
   if (isNew) {
     const pending = make('div', 'pending-notes');
     pending.id = 'pending-notes';
@@ -620,6 +652,8 @@ function readFields() {
     else if (result.problem && savedContact.met) fields.met = savedContact.met; // half-typed: keep what was saved
     if (result.problem && !problem) problem = result.problem;
   }
+  const through = readMetThrough(page);
+  if (through) fields.metThrough = through;
   return { fields, problem };
 }
 
@@ -689,6 +723,15 @@ function addEntry(key) {
     block.hidden = false;
     page.querySelector('[data-add="birthday"]').hidden = true;
     block.querySelector('[data-part="birthday"]').focus();
+    return;
+  }
+  if (key === 'metThrough') {
+    const block = page.querySelector('[data-group="metThrough"]');
+    const list = block.querySelector('.entries');
+    list.replaceChildren(metThroughRow({}, contactId, isNew));
+    block.hidden = false;
+    page.querySelector('[data-add="metThrough"]').hidden = true;
+    list.querySelector('.rel-person').focus();
     return;
   }
   if (key === 'met') {
@@ -934,6 +977,11 @@ async function saveNew(button) {
         fields.relations = made.list;
         createdContacts = made.created;
       }
+      if (fields.metThrough && fields.metThrough.create) {
+        const id = await relations.createContact(fields.metThrough.name);
+        createdContacts.push({ id, name: fields.metThrough.name });
+        fields.metThrough = { contactId: id };
+      }
       newId = await store.add('contact', fields);
     }
     const list = pendingNotes().filter((n) => n.title || !rich.isEmpty(n.body));
@@ -968,6 +1016,16 @@ function removeEntry(button) {
     relations.removeFrom(owner.id, owner.relId).catch((error) => setStatus(error.message, true));
     return;
   }
+  dirty = true;
+  save();
+}
+
+function removeThrough() {
+  const page = $('contact-page');
+  const block = page.querySelector('[data-group="metThrough"]');
+  block.querySelector('.entries').replaceChildren();
+  block.hidden = true;
+  page.querySelector('[data-add="metThrough"]').hidden = false;
   dirty = true;
   save();
 }
@@ -1069,6 +1127,7 @@ function bindPage() {
     else if (button.dataset.act === 'remove') removeEntry(button);
     else if (button.dataset.act === 'remove-birthday') removeBirthday();
     else if (button.dataset.act === 'remove-met') removeMet();
+    else if (button.dataset.act === 'remove-through') removeThrough();
     else if (button.dataset.act === 'delete') askDelete(button);
   });
 

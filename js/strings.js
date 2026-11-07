@@ -410,6 +410,10 @@ export const strings = {
   'crypto.errRecovery': 'Could not unlock: wrong recovery key.',
 
   'contact.chipRelation': '+ Relationship',
+  'contact.chipThrough': '+ Met through',
+  'contact.metThroughTitle': 'Met through',
+  'contact.through': 'through',
+  'contact.introduced': 'Introduced',
   'contact.relations': 'Relationships',
   'rel.partner': 'Partner',
   'rel.friend': 'Friend',

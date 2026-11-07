@@ -414,6 +414,10 @@ export default {
   'crypto.errRecovery': 'Não foi possível desbloquear: chave de recuperação incorreta.',
 
   'contact.chipRelation': '+ Relação',
+  'contact.chipThrough': '+ Conheci através de',
+  'contact.metThroughTitle': 'Conheci através de',
+  'contact.through': 'através de',
+  'contact.introduced': 'Apresentou',
   'contact.relations': 'Relações',
   'rel.partner': 'Parceiro(a)',
   'rel.friend': 'Amigo(a)',

@@ -414,6 +414,10 @@ export default {
   'crypto.errRecovery': 'Déverrouillage impossible : clé de récupération incorrecte.',
 
   'contact.chipRelation': '+ Relation',
+  'contact.chipThrough': '+ Rencontré via',
+  'contact.metThroughTitle': 'Rencontré via',
+  'contact.through': 'via',
+  'contact.introduced': 'A présenté',
   'contact.relations': 'Relations',
   'rel.partner': 'Partenaire',
   'rel.friend': 'Ami·e',

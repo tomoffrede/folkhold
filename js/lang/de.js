@@ -414,6 +414,10 @@ export default {
   'crypto.errRecovery': 'Entsperren nicht möglich: falscher Wiederherstellungsschlüssel.',
 
   'contact.chipRelation': '+ Beziehung',
+  'contact.chipThrough': '+ Kennengelernt über',
+  'contact.metThroughTitle': 'Kennengelernt über',
+  'contact.through': 'über',
+  'contact.introduced': 'Vorgestellt',
   'contact.relations': 'Beziehungen',
   'rel.partner': 'Partner(in)',
   'rel.friend': 'Freund(in)',
