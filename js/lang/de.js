@@ -28,7 +28,7 @@ export default {
   'contacts.noMatch': 'Keine Kontakte mit diesen Tags.',
 
   'tags.label': 'Tags',
-  'tags.placeholder': 'Tag hinzufügen, z. B. Arbeitsfreund',
+  'tags.placeholder': 'Tag hinzufügen, z. B. Kollege',
   'tags.show': 'Tags anzeigen',
   'tags.create': '„{name}“ erstellen',
   'tags.none': 'Noch keine Tags. Tippe eins ein, um es zu erstellen.',
