@@ -416,6 +416,7 @@ export const strings = {
   'contact.chipThrough': '+ Met through',
   'contact.metThroughTitle': 'Met through',
   'contact.through': 'through',
+  'contact.throughHint': "It does not have to be a person: you can also write an event or situation, like “Max’s wedding” or “climbing gym”, and press Enter.",
   'contact.introduced': 'Introduced',
   'contact.relations': 'Relationships',
   'rel.partner': 'Partner',

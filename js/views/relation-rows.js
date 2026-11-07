@@ -260,7 +260,7 @@ export function metThroughBlock(contact, defer) {
   const through = relations.throughOf(contact);
   if (through) list.append(metThroughRow(through, contact.id, defer));
   block.hidden = !through;
-  block.append(make('h3', 'group-title', strings['contact.metThroughTitle']), list);
+  block.append(make('h3', 'group-title', strings['contact.metThroughTitle']), list, make('p', 'hint', strings['contact.throughHint']));
   return block;
 }
 

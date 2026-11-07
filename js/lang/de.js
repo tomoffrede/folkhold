@@ -420,6 +420,7 @@ export default {
   'contact.chipThrough': '+ Kennengelernt über',
   'contact.metThroughTitle': 'Kennengelernt über',
   'contact.through': 'über',
+  'contact.throughHint': "Es muss keine Person sein: Du kannst auch ein Ereignis oder eine Situation eintragen, z. B. „Maxs Hochzeit“ oder „Kletterhalle“, und Enter drücken.",
   'contact.introduced': 'Vorgestellt',
   'contact.relations': 'Beziehungen',
   'rel.partner': 'Partner(in)',

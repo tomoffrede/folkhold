@@ -420,6 +420,7 @@ export default {
   'contact.chipThrough': '+ Conocido a través de',
   'contact.metThroughTitle': 'Conocido a través de',
   'contact.through': 'a través de',
+  'contact.throughHint': "No tiene que ser una persona: también puedes escribir un evento o una situación, como «la boda de Max» o «el gimnasio de escalada», y pulsar Enter.",
   'contact.introduced': 'Presentó a',
   'contact.relations': 'Relaciones',
   'rel.partner': 'Pareja',

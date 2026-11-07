@@ -420,6 +420,7 @@ export default {
   'contact.chipThrough': '+ Rencontré via',
   'contact.metThroughTitle': 'Rencontré via',
   'contact.through': 'via',
+  'contact.throughHint': "Ce n’est pas forcément une personne : vous pouvez aussi écrire un événement ou une situation, comme « le mariage de Max » ou « la salle d’escalade », puis appuyer sur Entrée.",
   'contact.introduced': 'A présenté',
   'contact.relations': 'Relations',
   'rel.partner': 'Partenaire',
