@@ -20,6 +20,7 @@ import { formatDate } from '../dates.js';
 import { showToast } from './toast.js';
 import { openModal, confirmModal } from './modal.js';
 import { primeKeyboard, focusSoon } from '../keyboard.js';
+import { calendarButton, calendarTick, openCalendarChooser } from './calendar-add.js';
 
 const $ = (id) => document.getElementById(id);
 const ID = '([0-9a-f-]+)';
@@ -171,6 +172,12 @@ function linkedLine(template, contacts) {
   return line;
 }
 
+// The calendar title of an event that has no title and no details: "Event with Anna, Berta".
+function calendarFallback(contactIds) {
+  const names = [...new Set(contactIds)].map((id) => store.get('contact', id)).filter(Boolean).map(shortName);
+  return names.length ? t('cal.fallback', { names: names.join(', ') }) : strings['cal.fallbackNone'];
+}
+
 // ---------- a new note or event ----------
 
 function buildNew(page, route) {
@@ -194,7 +201,9 @@ function buildNew(page, route) {
     fields.setName(chosen.length === 1 ? shortName(chosen[0]) : '');
   };
   const picker = createPicker({ selected: preselected, onChange: () => { syncNames(); keepDraft(); } });
-  const fields = kind.makeFields({ onChange: keepDraft });
+  let tick = null; // the "add to my calendar" tick box (events only)
+  const fields = kind.makeFields({ onChange: () => { keepDraft(); if (tick) tick.refresh(); } });
+  if (route.kind === 'event') tick = calendarTick({ getValues: () => fields.get() });
   syncNames();
   const error = makeError();
   const save = make('button', 'btn btn-primary btn-form', S(route.kind, 'save'));
@@ -203,7 +212,7 @@ function buildNew(page, route) {
   const form = make('div', 'form');
   const slot = make('div');
   slot.id = 'draft-slot';
-  form.append(slot, picker.element, fields.element, error, save);
+  form.append(slot, picker.element, fields.element, ...(tick ? [tick.element] : []), error, save);
   page.append(form);
 
   save.addEventListener('click', () =>
@@ -215,8 +224,9 @@ function buildNew(page, route) {
       if (mistake) return showError(error, mistake);
       clearTimeout(draftTimer);
       if (contactIds.length === 1 && (await moveBirthday(route, values, store.get('contact', contactIds[0]), null))) return;
-      await kind.api.create({ ...kind.pick(values), contactIds });
+      const newId = await kind.api.create({ ...kind.pick(values), contactIds });
       clearDraft(name);
+      if (tick && tick.checked()) await openCalendarChooser({ id: newId, values: kind.pick(values), fallback: calendarFallback(contactIds) });
       const target = `#/contact/${preselected[0] || contactIds[0]}`;
       leave(origin === `${target}/edit` ? origin : target); // from a contact's edit page: back to it
     }),
@@ -253,7 +263,8 @@ function buildEdit(page, route, note, contact) {
     }, DRAFT_DELAY);
   };
 
-  const fields = kind.makeFields({ ...original, onChange: keepDraft });
+  let calendar = null; // the "add to calendar" button (events only)
+  const fields = kind.makeFields({ ...original, onChange: () => { keepDraft(); if (calendar) calendar.refresh(); } });
   if (fields.setName) fields.setName(shortName(contact));
   // More contacts can be added to the item here; the ones it already has are not offered again.
   const picker = createPicker({ onlyMore: true, exclude: note.contactIds || [] });
@@ -273,7 +284,8 @@ function buildEdit(page, route, note, contact) {
   formWrap.append(picker.element);
   const promptWrap = make('div');
   promptWrap.hidden = true;
-  formWrap.append(fields.element, error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));
+  if (route.kind === 'event') calendar = calendarButton({ getId: () => note.id, getValues: () => fields.get(), getFallback: () => calendarFallback([route.contactId, ...(note.contactIds || [])]) });
+  formWrap.append(fields.element, ...(calendar ? [calendar.element] : []), error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));
   page.append(formWrap, promptWrap);
 
   save.addEventListener('click', () =>
