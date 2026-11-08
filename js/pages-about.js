@@ -7,7 +7,7 @@ export const ABOUT = {
       title: 'Über Folkhold',
       blocks: [
         ['h', 'Was Folkhold ist'],
-        ['p', 'Folkhold ist eine kleine, kostenlose App, um sich an die Menschen in deinem Leben zu erinnern. Zu jeder Person kannst du Grunddaten, Notizen, Ereignisse (eine Reise, der Tag, an dem ihr euch kennengelernt habt, ein Geburtstag) und eigene Tags wie „Arbeitsfreund“ speichern. Du kannst alles durchsuchen und sehen, was demnächst ansteht.'],
+        ['p', 'Folkhold ist eine kleine, kostenlose App, um sich an die Menschen in deinem Leben zu erinnern. Zu jeder Person kannst du Grunddaten, Notizen, Ereignisse (eine Reise, der Tag, an dem ihr euch kennengelernt habt, ein Geburtstag) und eigene Tags wie „Kollege“ speichern. Du kannst alles durchsuchen und sehen, was demnächst ansteht.'],
         ['p', 'Sie ist für den Moment gedacht, in dem du jemanden triffst und dich an ihn oder sie erinnern willst: Eine Person hinzuzufügen dauert ein paar Sekunden, alles andere kannst du später ergänzen. Nötig ist nur ein Name oder Spitzname.'],
         ['h', 'Wer sie gemacht hat'],
         ['p', 'Folkhold ist ein persönliches Projekt von {name}. Es ist kostenlos, hat keine Werbung, kein Tracking und keine Firma dahinter.'],
