@@ -2355,3 +2355,9 @@ body.page-open #auth-root {
   position: relative;
   grid-template-columns: minmax(0, 1fr) 44px; /* the person field and the remove button (no label column) */
 }
+
+/* "How we met": the small link that adds a person */
+.through-link {
+  margin-top: var(--space-1);
+  padding: 8px 2px;
+}

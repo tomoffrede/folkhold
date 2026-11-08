@@ -17,7 +17,7 @@ function has(contact, field) {
     case 'birthday':
       return Boolean(contact.birthday);
     case 'met':
-      return Boolean(contact.met);
+      return Boolean(contact.met || contact.metText || contact.metThrough);
     case 'tags':
       return (contact.tagIds || []).length > 0;
     case 'notes':

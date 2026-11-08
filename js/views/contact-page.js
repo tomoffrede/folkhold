@@ -28,6 +28,7 @@ import { personIcon } from './icons.js';
 import { handleDropKeys } from '../dropnav.js';
 import { primeKeyboard, focusSoon } from '../keyboard.js';
 import { createPicker } from './contact-picker.js';
+import { splitMet } from '../metsplit.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -41,7 +42,7 @@ const GROUPS = [
 ];
 const NAME_KEYS = ['firstName', 'lastName', 'nickname'];
 // Everything the editor handles. Any other saved field is kept as it is.
-const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'metThrough', 'relations', ...GROUPS.map((group) => group.key)];
+const MANAGED = [...NAME_KEYS, 'tagIds', 'birthday', 'met', 'metText', 'metSrc', 'metThrough', 'relations', ...GROUPS.map((group) => group.key)];
 const MONTHS_LONG = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(locale(), { month: 'long' }));
 
 let contactId = null;
@@ -150,13 +151,16 @@ function renderView(page, contact) {
     details.bodyEl.append(block);
   }
   const through = relations.throughOf(contact);
-  if (contact.met || through) {
+  if (contact.met || contact.metText || through) {
     previewParts.push(strings['contact.met']);
     const block = make('div', 'group');
     const value = make('span', 'info-value');
-    if (contact.met) value.append(formatDate(contact.met));
+    const pieces = [];
+    if (contact.metText) pieces.push(contact.metText);
+    if (contact.met) pieces.push(formatDate(contact.met));
+    value.append(pieces.join(' · '));
     if (through) {
-      value.append(`${contact.met ? ' · ' : ''}${strings['contact.through']} `);
+      value.append(`${pieces.length ? ' · ' : ''}${strings['contact.through']} `);
       if (through.contactId) {
         const link = make('a', 'info-link', through.name);
         link.href = `#/contact/${through.contactId}`;
@@ -368,20 +372,22 @@ function birthdayBlock(birthday) {
   return block;
 }
 
-// "Met": when you first met, typed freely like an event date (a year is enough).
-function metBlock(met) {
+// "How we met": one free text. A date inside it ("late 2021") is found by the app; the rest is the description.
+// Under it, a small link adds a person (a contact or just a name) the contact was met through.
+function metBlock(contact) {
   const block = make('div', 'group');
   block.dataset.group = 'met';
-  block.hidden = !met;
+  block.hidden = !(contact.met || contact.metText || contact.metThrough);
   const input = make('input');
   input.type = 'text';
   input.autocomplete = 'off';
-  input.autocapitalize = 'none';
+  input.autocapitalize = 'sentences';
   input.spellcheck = false;
   input.dataset.part = 'met';
   input.placeholder = strings['contact.metPlaceholder'];
   input.setAttribute('aria-label', strings['contact.met']);
-  input.value = met ? met.src || met.text || '' : '';
+  const old = contact.met ? contact.met.src || contact.met.text || '' : '';
+  input.value = contact.metSrc !== undefined ? contact.metSrc : old;
   const remove = make('button', 'entry-remove', '×');
   remove.type = 'button';
   remove.dataset.act = 'remove-met';
@@ -389,28 +395,29 @@ function metBlock(met) {
   const row = make('div', 'met-row');
   row.append(input, remove);
   const reading = make('p', 'date-reading met-reading');
-  block.append(make('h3', 'group-title', strings['contact.met']), row, reading);
+  const throughLink = make('button', 'link through-link', strings['contact.addThrough']);
+  throughLink.type = 'button';
+  throughLink.dataset.add = 'metThrough';
+  throughLink.hidden = Boolean(contact.metThrough);
+  block.append(make('h3', 'group-title', strings['contact.met']), row, reading, throughLink);
   showMetReading(block);
   return block;
 }
 
-// Reads the "Met" box. Returns { date } or { problem: the text key of what is wrong }; an empty box is neither.
+// What the "How we met" box says: the date (if any) and the description.
 function readMet(block) {
-  const text = block.querySelector('[data-part="met"]').value;
-  if (!text.trim()) return {};
-  const result = parseDate(text);
-  if (result.error) return { problem: `event.err.${result.error}` };
-  if (result.yearly) return { problem: 'event.err.needYear' }; // a day and month alone is not a time you met
-  return { date: result.date };
+  const text = block.querySelector('[data-part="met"]').value.trim();
+  return { text, ...splitMet(text) };
 }
 
 function showMetReading(block) {
-  const text = block.querySelector('[data-part="met"]').value;
-  const result = parseDate(text);
-  const reading = block.querySelector('.met-reading');
-  const bad = result.error || result.yearly;
-  reading.textContent = !text.trim() ? '' : bad ? strings[result.error === 'needYear' || result.yearly ? 'event.err.needYear' : 'event.readingUnsure'] : `→ ${result.reading}`;
-  reading.classList.toggle('is-unsure', Boolean(bad));
+  const { text, date, reading, rest, needYear } = readMet(block);
+  const line = block.querySelector('.met-reading');
+  let message = '';
+  if (date) message = rest ? `→ ${strings['contact.metWhen']} ${reading} · ${strings['contact.metWhat']} ${rest}` : `→ ${reading}`;
+  else if (needYear) message = strings['event.err.needYear'];
+  line.textContent = text ? message : '';
+  line.classList.toggle('is-unsure', Boolean(needYear && !date));
 }
 
 function doneButton(className) {
@@ -465,7 +472,7 @@ function renderEditor(page, contact) {
   const metChip = make('button', 'chip', strings['contact.chipMet']);
   metChip.type = 'button';
   metChip.dataset.add = 'met';
-  metChip.hidden = Boolean(contact.met);
+  metChip.hidden = Boolean(contact.met || contact.metText || contact.metThrough);
   if (hiddenFields.includes('met')) metChip.dataset.off = '1';
   chips.append(metChip);
   const relationRowChips = make('div', 'chips chips-relation');
@@ -475,13 +482,6 @@ function renderEditor(page, contact) {
   relationChip.append(personIcon(2), strings['contact.chipRelation']);
   if (hiddenFields.includes('relations')) relationChip.dataset.off = '1';
   relationRowChips.append(relationChip);
-  const throughChip = make('button', 'chip chip-relation');
-  throughChip.type = 'button';
-  throughChip.dataset.add = 'metThrough';
-  throughChip.append(personIcon(1), strings['contact.chipThrough']);
-  throughChip.hidden = Boolean(contact.metThrough);
-  if (hiddenFields.includes('met')) throughChip.dataset.off = '1';
-  relationRowChips.append(throughChip);
   {
     const noteChip = make('button', 'chip', strings['contact.chipNote']);
     noteChip.type = 'button';
@@ -502,7 +502,7 @@ function renderEditor(page, contact) {
 
   page.append(head, names);
   GROUPS.forEach((group) => page.append(groupBlock(group, contact[group.key] || [])));
-  page.append(birthdayBlock(contact.birthday), metBlock(contact.met), metThroughBlock(contact, isNew), relationBlock(contact, isNew));
+  page.append(birthdayBlock(contact.birthday), metBlock(contact), metThroughBlock(contact, isNew), relationBlock(contact, isNew));
   if (isNew) {
     const pending = make('div', 'pending-notes');
     pending.id = 'pending-notes';
@@ -647,10 +647,10 @@ function readFields() {
   }
   const metBox = page.querySelector('[data-group="met"]');
   if (!metBox.hidden) {
-    const result = readMet(metBox);
-    if (result.date) fields.met = result.date;
-    else if (result.problem && savedContact.met) fields.met = savedContact.met; // half-typed: keep what was saved
-    if (result.problem && !problem) problem = result.problem;
+    const { text, date, rest } = readMet(metBox);
+    if (text) fields.metSrc = text;
+    if (date) fields.met = date;
+    if (rest) fields.metText = rest;
   }
   const through = readMetThrough(page);
   if (through) fields.metThrough = through;
@@ -730,7 +730,7 @@ function addEntry(key) {
     const list = block.querySelector('.entries');
     list.replaceChildren(metThroughRow({}, contactId, isNew));
     block.hidden = false;
-    page.querySelector('[data-add="metThrough"]').hidden = true;
+    page.querySelector('.through-link').hidden = true;
     list.querySelector('.rel-person').focus();
     return;
   }
@@ -1045,7 +1045,7 @@ function removeThrough() {
   const block = page.querySelector('[data-group="metThrough"]');
   block.querySelector('.entries').replaceChildren();
   block.hidden = true;
-  page.querySelector('[data-add="metThrough"]').hidden = false;
+  page.querySelector('.through-link').hidden = false;
   dirty = true;
   save();
 }
@@ -1056,6 +1056,11 @@ function removeMet() {
   block.querySelector('[data-part="met"]').value = '';
   showMetReading(block);
   block.hidden = true;
+  // the person it was met through goes too
+  const through = page.querySelector('[data-group="metThrough"]');
+  through.querySelector('.entries').replaceChildren();
+  through.hidden = true;
+  block.querySelector('.through-link').hidden = false;
   page.querySelector('[data-add="met"]').hidden = false;
   dirty = true;
   save();
