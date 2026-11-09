@@ -24,7 +24,7 @@ function fold(text) {
   return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
 
-export function createPicker({ selected = [], locked = null, onChange = () => {}, onlyMore = false, exclude = [] }) {
+export function createPicker({ selected = [], locked = null, onChange = () => {}, onlyMore = false, exclude = [], onChosen = () => {} }) {
   const ids = [...selected];
   const element = make('div', 'picker');
   const chips = make('div', 'picker-chips');
@@ -90,6 +90,7 @@ export function createPicker({ selected = [], locked = null, onChange = () => {}
     closeMenu();
     renderChips();
     onChange();
+    onChosen(id);
   }
 
   function openMenu() {

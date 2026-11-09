@@ -166,5 +166,6 @@ export function createEventFields({ title = '', details = '', date = null, repea
       refreshWho();
     },
     focus: () => titleInput.focus(),
+    focusTitle: () => titleInput.focus(),
   };
 }

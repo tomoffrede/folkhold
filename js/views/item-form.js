@@ -200,7 +200,8 @@ function buildNew(page, route) {
     const chosen = picker.getSelected().map((id) => store.get('contact', id)).filter(Boolean);
     fields.setName(chosen.length === 1 ? shortName(chosen[0]) : '');
   };
-  const picker = createPicker({ selected: preselected, onChange: () => { syncNames(); keepDraft(); } });
+  // Choosing the first contact moves the cursor on to the title (more contacts can be added with the arrow or by tapping the field)
+  const picker = createPicker({ selected: preselected, onChange: () => { syncNames(); keepDraft(); }, onChosen: () => { if (picker.getSelected().length === 1) fields.focusTitle(); } });
   let tick = null; // the "add to my calendar" tick box (events only)
   const fields = kind.makeFields({ onChange: () => { keepDraft(); if (tick) tick.refresh(); } });
   if (route.kind === 'event') tick = calendarTick({ getValues: () => fields.get() });

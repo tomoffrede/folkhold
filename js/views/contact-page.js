@@ -149,14 +149,9 @@ function renderView(page, contact) {
     previewParts.push(strings['contact.birthday']);
     const block = make('div', 'group');
     block.append(make('h3', 'group-title', strings['contact.birthday']), infoItem('', make('span', 'info-value', formatBirthday(contact.birthday))));
-    const b = contact.birthday;
-    const birthdayEvent = { yearly: true, month: b.month, day: b.day, text: formatBirthday({ day: b.day, month: b.month }) };
     const addBirthday = make('button', 'link calendar-link', strings['cal.add']);
     addBirthday.type = 'button';
-    addBirthday.addEventListener('click', () => {
-      const first = contact.firstName || contact.nickname || displayName(contact);
-      openCalendarChooser({ id: `birthday-${contact.id}`, values: { title: t('upcoming.birthday', { name: first }), details: '', date: birthdayEvent, repeat: true }, fallback: first });
-    });
+    addBirthday.addEventListener('click', () => openBirthdayCalendar(contact));
     block.append(addBirthday);
     details.bodyEl.append(block);
   }
@@ -356,6 +351,23 @@ function groupBlock(group, entries) {
   return block;
 }
 
+// The calendar pop-up for a contact's birthday: a yearly event titled with the full name.
+function openBirthdayCalendar(contact) {
+  const b = contact.birthday;
+  const name = displayName(contact);
+  const date = { yearly: true, month: b.month, day: b.day, text: formatBirthday({ day: b.day, month: b.month }) };
+  return openCalendarChooser({ id: `birthday-${contact.id}`, values: { title: t('upcoming.birthday', { name }), details: '', date, repeat: true }, fallback: name });
+}
+
+// After saving: if the tick box under the birthday is ticked, offer the calendar pop-up for the saved birthday.
+async function birthdayCalendarIfTicked(id) {
+  const box = document.querySelector('[data-part="birthday-cal"]');
+  if (!box || !box.checked) return;
+  box.checked = false;
+  const contact = store.get('contact', id);
+  if (contact && contact.birthday) await openBirthdayCalendar(contact);
+}
+
 function birthdayBlock(birthday) {
   const block = make('div', 'group');
   block.dataset.group = 'birthday';
@@ -379,6 +391,12 @@ function birthdayBlock(birthday) {
   const row = make('div', 'met-row');
   row.append(input, remove);
   block.append(make('h3', 'group-title', strings['contact.birthday']), row, make('p', 'hint birthday-note', strings['contact.birthdayHint']));
+  const tick = make('label', 'check calendar-tick');
+  const box = make('input');
+  box.type = 'checkbox';
+  box.dataset.part = 'birthday-cal';
+  tick.append(box, make('span', '', strings['cal.tick']));
+  block.append(tick);
   return block;
 }
 
@@ -1026,6 +1044,7 @@ async function saveNew(button) {
       await events.create({ title: e.title, details: e.details, date: e.date, repeat: e.repeat, kind: e.kind, contactIds: [newId, ...e.block.picker.getSelected()] });
       e.block.dataset.saved = '1';
     }
+    await birthdayCalendarIfTicked(newId);
     leaveTo(`#/contact/${newId}`);
     if (createdContacts.length) askEditCreated(createdContacts);
     if (movedBirthday) showToast(t('birthday.saved', { name: displayName(fields), date: formatDate(movedBirthday.date) }));
@@ -1096,6 +1115,7 @@ async function finish(button) {
   const ok = dirty ? await save() : await queue.then(() => !birthdayProblem && !$('contact-status').classList.contains('is-error'));
   button.disabled = false;
   if (ok && !birthdayProblem) {
+    await birthdayCalendarIfTicked(id);
     leaveTo(`#/contact/${id}`);
     afterEdit(id);
   }

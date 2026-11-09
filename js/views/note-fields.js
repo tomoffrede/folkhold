@@ -67,5 +67,6 @@ export function createNoteFields({ title = '', body = [], priority = 0, onChange
       refresh();
     },
     focus: () => editor.focus(),
+    focusTitle: () => titleInput.focus(),
   };
 }
