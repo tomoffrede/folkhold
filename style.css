@@ -2397,3 +2397,18 @@ body.page-open #auth-root {
 .calendar-link { align-self: flex-start; padding: 8px 2px; }
 .time-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .time-field input { width: 100%; min-width: 0; box-sizing: border-box; }
+
+/* Time fields: 16px text so iPhone Safari does not zoom in when they are tapped */
+.time-field input {
+  font-size: 16px;
+  height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+}
+.time-label { font-size: 0.9em; }
+.time-reading { min-height: 0; }
+.time-reading:empty { display: none; }

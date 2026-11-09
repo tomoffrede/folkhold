@@ -5,7 +5,6 @@ import { strings } from '../strings.js';
 import { calendarInfo, calendarTexts, buildIcs, googleUrl, sendFile } from '../calendar.js';
 import { resolveTimes, formatTime } from '../times.js';
 import { openModal } from './modal.js';
-import { formatDate } from '../dates.js';
 import { t } from '../strings.js';
 
 function make(tag, className, text) {
@@ -21,8 +20,11 @@ export function openCalendarChooser({ id, values, fallback }) {
   if (!info) return Promise.resolve();
   const texts = calendarTexts({ title: values.title, details: values.details, fallback });
   return new Promise((resolve) => {
+    // iPhone Safari cancels a file download that has only just started if the page changes at the same moment
+    // (which happens when this pop-up was opened by saving a new event), so the caller waits a moment after a download.
+    let slow = false;
+    const done = () => (slow ? setTimeout(resolve, 1500) : resolve());
     const panel = make('div', 'modal-panel calendar-choices');
-    panel.append(make('h3', 'prompt-title', strings['cal.title']), make('p', 'modal-text', `${texts.summary} · ${formatDate(values.date)}`));
     // Optional time of day (only for a single day)
     let timeBox = null;
     let readTimes = () => ({ none: true });
@@ -86,7 +88,10 @@ export function openCalendarChooser({ id, values, fallback }) {
       panel.append(timeBox);
     }
     const choices = [
-      ['cal.app', 'btn btn-primary', (times) => sendFile(buildIcs({ id, info, times, ...texts }), texts.summary)],
+      ['cal.app', 'btn btn-primary', (times) => {
+        slow = true; // see below
+        sendFile(buildIcs({ id, info, times, ...texts }), texts.summary);
+      }],
       ['cal.google', 'btn btn-secondary', (times) => window.open(googleUrl({ info, times, ...texts }), '_blank', 'noopener')],
     ];
     let dialog;
@@ -104,8 +109,8 @@ export function openCalendarChooser({ id, values, fallback }) {
     const cancel = make('button', 'link', strings['cal.cancel']);
     cancel.type = 'button';
     cancel.addEventListener('click', () => dialog.close());
-    panel.append(make('p', 'hint', strings['cal.appHint']), cancel);
-    dialog = openModal(panel, resolve);
+    panel.append(cancel);
+    dialog = openModal(panel, done);
   });
 }
 
