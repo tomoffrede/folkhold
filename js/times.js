@@ -36,8 +36,8 @@ const NUMBER_RE = new RegExp(`\\b(?:${Object.keys(NUMBER_WORDS).sort((a, b) => b
 
 const NOON = /\b(?:noon|midday|mittags?|midi|mediodia|medio dia|meio dia|meiodia)\b/g;
 const MIDNIGHT = /\b(?:midnight|mitternacht|minuit|medianoche|media noche|meia noite|meianoite)\b/g;
-const PM_WORDS = /\b(?:afternoon|evening|nachmittags?|nachm|abends?|soir|apres midi|de la tarde|da tarde|de la noche|da noite)\b/g;
-const NIGHT_WORDS = /\b(?:night|nachts|de la noche|da noite|noite|noche|nuit|de nuit)\b/;
+const PM_WORDS = /\b(?:afternoon|evening|nachmittags?|nachm|abends?|soir|apres midi|de la tarde|da tarde)\b/g;
+const NIGHT_WORDS = /\b(?:at night|night|nachts|de la noche|da noite|de la madrugada|da madrugada|madrugada|de nuit|de la nuit|nuit)\b/g;
 const AM_WORDS = /\b(?:morning|morgens|vormittags?|matin|de la manana|da manha|du matin)\b/g;
 const FILLER = /\b(?:at|um|ab|from|von|vers|about|around|circa|ca|gegen|desde|de la|de l|de|da|do|des|du|le|la|las|los|el|o|in the|in|im|am|of the|the|a|as|au|à)\b/g;
 
@@ -52,14 +52,18 @@ export function parseTime(text) {
   s = s.replace(/-/g, ' ').replace(/'/g, ' ');
   // Afternoon / evening / night / morning words first ("apres midi" must not become noon)
   s = s.replace(/(\d)\s*([ap])\.?\s?m\b\.?/g, '$1 $2m ').replace(/\b([ap])\.\s?m\.?/g, ' $1m ');
-  const night = NIGHT_WORDS.test(s);
   const pm = /\bpm\b/.test(s) || PM_WORDS.test(s);
   PM_WORDS.lastIndex = 0;
-  const am = /\bam\b/.test(s) || AM_WORDS.test(s);
+  const am = /\bam\b/.test(s); // "12 am" is midnight
+  const morning = AM_WORDS.test(s); // "12 de la manana" is noon
   AM_WORDS.lastIndex = 0;
-  s = s.replace(PM_WORDS, ' ').replace(AM_WORDS, ' ').replace(/\b(?:pm|am|night|nachts|nuit)\b/g, ' ');
-  // Words that are the time itself
+  s = s.replace(PM_WORDS, ' ').replace(AM_WORDS, ' ').replace(/\b(?:pm|am)\b/g, ' ');
+  // Words that are the time itself ("media noche" before the night words are removed)
   s = s.replace(MIDNIGHT, ' 0 ').replace(NOON, ' 12 ');
+  // "at night": 6-11 is the evening (11 de la noche = 23:00), 12 is midnight, 1-5 is the small hours (2 de la noche = 02:00)
+  const night = NIGHT_WORDS.test(s);
+  NIGHT_WORDS.lastIndex = 0;
+  s = s.replace(NIGHT_WORDS, ' ');
   s = s.replace(NUMBER_RE, (word) => ` ${toNumber(word)} `);
   s = s.replace(/(\d)\s*o ?clock/g, '$1 ');
   s = s.replace(FILLER, ' ').replace(/\bl\b/g, ' ').replace(/\s+/g, ' ').trim();
@@ -94,7 +98,10 @@ export function parseTime(text) {
   if (h === 24 && m === 0) h = 0;
   if (h < 0 || h > 23 || m < 0 || m > 59) return { error: true };
   if (pm && h < 12) h += 12;
-  else if (night && h >= 1 && h <= 5 && !pm) h += 0; // "2 at night" stays 2:00
+  else if (night && !am && !morning) {
+    if (h >= 6 && h <= 11) h += 12;
+    else if (h === 12) h = 0;
+  }
   else if (am && h === 12) h = 0;
   return { h, m };
 }
