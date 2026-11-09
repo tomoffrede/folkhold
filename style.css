@@ -2377,3 +2377,23 @@ body.page-open #auth-root {
 .calendar-choices .link {
   align-self: center;
 }
+
+/* Time of day in the calendar pop-up */
+.time-box { display: flex; flex-direction: column; gap: var(--space-1); }
+.time-head { display: flex; align-items: center; gap: var(--space-2); }
+.time-title { font-weight: 600; }
+.time-info {
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid currentColor; background: none;
+  color: inherit; font: italic 700 15px/1 serif; cursor: pointer; padding: 0;
+}
+.time-help { font-size: 0.9em; }
+.time-help p { margin: 0 0 var(--space-1); }
+.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.time-field { display: flex; flex-direction: column; gap: 2px; }
+.time-label { font-size: 0.85em; }
+.time-field input.is-invalid { border-color: #c0392b; }
+.time-reading { margin: 0; min-height: 1.3em; font-size: 0.9em; }
+.time-reading.is-error { color: #c0392b; }
+.calendar-link { align-self: flex-start; padding: 8px 2px; }
+.time-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.time-field input { width: 100%; min-width: 0; box-sizing: border-box; }

@@ -29,6 +29,7 @@ import { handleDropKeys } from '../dropnav.js';
 import { primeKeyboard, focusSoon } from '../keyboard.js';
 import { createPicker } from './contact-picker.js';
 import { splitMet } from '../metsplit.js';
+import { openCalendarChooser } from './calendar-add.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -148,6 +149,15 @@ function renderView(page, contact) {
     previewParts.push(strings['contact.birthday']);
     const block = make('div', 'group');
     block.append(make('h3', 'group-title', strings['contact.birthday']), infoItem('', make('span', 'info-value', formatBirthday(contact.birthday))));
+    const b = contact.birthday;
+    const birthdayEvent = { yearly: true, month: b.month, day: b.day, text: formatBirthday({ day: b.day, month: b.month }) };
+    const addBirthday = make('button', 'link calendar-link', strings['cal.add']);
+    addBirthday.type = 'button';
+    addBirthday.addEventListener('click', () => {
+      const first = contact.firstName || contact.nickname || displayName(contact);
+      openCalendarChooser({ id: `birthday-${contact.id}`, values: { title: t('upcoming.birthday', { name: first }), details: '', date: birthdayEvent, repeat: true }, fallback: first });
+    });
+    block.append(addBirthday);
     details.bodyEl.append(block);
   }
   const through = relations.throughOf(contact);

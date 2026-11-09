@@ -3,8 +3,10 @@
 
 import { strings } from '../strings.js';
 import { calendarInfo, calendarTexts, buildIcs, googleUrl, sendFile } from '../calendar.js';
+import { resolveTimes, formatTime } from '../times.js';
 import { openModal } from './modal.js';
 import { formatDate } from '../dates.js';
+import { t } from '../strings.js';
 
 function make(tag, className, text) {
   const node = document.createElement(tag);
@@ -21,17 +23,80 @@ export function openCalendarChooser({ id, values, fallback }) {
   return new Promise((resolve) => {
     const panel = make('div', 'modal-panel calendar-choices');
     panel.append(make('h3', 'prompt-title', strings['cal.title']), make('p', 'modal-text', `${texts.summary} · ${formatDate(values.date)}`));
+    // Optional time of day (only for a single day)
+    let timeBox = null;
+    let readTimes = () => ({ none: true });
+    if (info.start === info.end) {
+      const head = make('div', 'time-head');
+      head.append(make('span', 'time-title', strings['cal.timeLabel']));
+      const infoButton = make('button', 'time-info', 'i');
+      infoButton.type = 'button';
+      infoButton.setAttribute('aria-label', strings['cal.timeInfoLabel']);
+      infoButton.setAttribute('aria-expanded', 'false');
+      const help = make('div', 'time-help');
+      help.hidden = true;
+      for (const line of strings['cal.timeHelp'].split('\n')) help.append(make('p', '', line));
+      infoButton.addEventListener('click', () => {
+        help.hidden = !help.hidden;
+        infoButton.setAttribute('aria-expanded', String(!help.hidden));
+      });
+      head.append(infoButton);
+      const row = make('div', 'time-row');
+      const makeInput = (placeholder, label) => {
+        const field = make('label', 'time-field');
+        field.append(make('span', 'time-label', label));
+        const input = make('input');
+        input.type = 'text';
+        input.inputMode = 'text';
+        input.autocomplete = 'off';
+        input.autocapitalize = 'off';
+        input.spellcheck = false;
+        input.placeholder = placeholder;
+        field.append(input);
+        row.append(field);
+        return input;
+      };
+      const startInput = makeInput(strings['cal.startPlaceholder'], strings['cal.start']);
+      const endInput = makeInput(strings['cal.endPlaceholder'], strings['cal.end']);
+      const reading = make('p', 'time-reading');
+      reading.setAttribute('aria-live', 'polite');
+      const show = (final) => {
+        const r = resolveTimes(startInput.value, endInput.value);
+        startInput.classList.toggle('is-invalid', r.error === 'start' && final);
+        endInput.classList.toggle('is-invalid', r.error === 'end' && final);
+        reading.classList.toggle('is-error', Boolean(r.error));
+        if (r.none) reading.textContent = strings['cal.timeAllDay'];
+        else if (r.error === 'start') reading.textContent = final ? strings['cal.timeErrStart'] : '';
+        else if (r.error === 'end') reading.textContent = final ? strings['cal.timeErrEnd'] : '';
+        else if (r.error === 'needStart') reading.textContent = strings['cal.timeNeedStart'];
+        else {
+          const range = `${formatTime(r.start)}–${formatTime(r.end)}${r.endNextDay ? ` ${strings['cal.nextDay']}` : ''}`;
+          reading.textContent = r.defaultedEnd ? t('cal.timeReadingDefault', { range }) : range;
+        }
+        return r;
+      };
+      for (const input of [startInput, endInput]) {
+        input.addEventListener('input', () => show(false));
+        input.addEventListener('blur', () => show(true));
+      }
+      show(false);
+      readTimes = () => show(true);
+      timeBox = make('div', 'time-box');
+      timeBox.append(head, help, row, reading);
+      panel.append(timeBox);
+    }
     const choices = [
-      ['cal.app', 'btn btn-primary', () => sendFile(buildIcs({ id, info, ...texts }), texts.summary)],
-      ['cal.google', 'btn btn-secondary', () => window.open(googleUrl({ info, ...texts }), '_blank', 'noopener')],
-      ['cal.file', 'btn btn-secondary', () => sendFile(buildIcs({ id, info, ...texts }), texts.summary, { download: true })],
+      ['cal.app', 'btn btn-primary', (times) => sendFile(buildIcs({ id, info, times, ...texts }), texts.summary)],
+      ['cal.google', 'btn btn-secondary', (times) => window.open(googleUrl({ info, times, ...texts }), '_blank', 'noopener')],
     ];
     let dialog;
     for (const [key, className, action] of choices) {
       const button = make('button', `${className} btn-small`, strings[key]);
       button.type = 'button';
       button.addEventListener('click', async () => {
-        await action();
+        const times = readTimes();
+        if (times.error) return; // the message under the time fields says what to fix
+        await action(times);
         dialog.close();
       });
       panel.append(button);
@@ -39,7 +104,7 @@ export function openCalendarChooser({ id, values, fallback }) {
     const cancel = make('button', 'link', strings['cal.cancel']);
     cancel.type = 'button';
     cancel.addEventListener('click', () => dialog.close());
-    panel.append(cancel);
+    panel.append(make('p', 'hint', strings['cal.appHint']), cancel);
     dialog = openModal(panel, resolve);
   });
 }

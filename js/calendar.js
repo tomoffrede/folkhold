@@ -77,7 +77,19 @@ function fold(line) {
 
 const compact = (iso) => iso.replace(/-/g, '');
 
-export function buildIcs({ id, info, summary, description }) {
+// The start and end of the event as calendar values: whole days, or (with a time of day) local clock times.
+// times: { start:{h,m}, end:{h,m}, endNextDay } from resolveTimes, only for a single-day event.
+function when(info, times) {
+  if (!times || !times.start || info.start !== info.end) {
+    return { allDay: true, start: compact(info.start), end: compact(plusDay(info.end)) };
+  }
+  const clock = (t) => `${pad(t.h)}${pad(t.m)}00`;
+  const endDay = times.endNextDay ? plusDay(info.start) : info.start;
+  return { allDay: false, start: `${compact(info.start)}T${clock(times.start)}`, end: `${compact(endDay)}T${clock(times.end)}` };
+}
+
+export function buildIcs({ id, info, summary, description, times }) {
+  const w = when(info, times);
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
   const lines = [
     'BEGIN:VCALENDAR',
@@ -87,8 +99,8 @@ export function buildIcs({ id, info, summary, description }) {
     'BEGIN:VEVENT',
     `UID:${id || crypto.randomUUID()}@folkhold`,
     `DTSTAMP:${stamp}`,
-    `DTSTART;VALUE=DATE:${compact(info.start)}`,
-    `DTEND;VALUE=DATE:${compact(plusDay(info.end))}`,
+    w.allDay ? `DTSTART;VALUE=DATE:${w.start}` : `DTSTART:${w.start}`,
+    w.allDay ? `DTEND;VALUE=DATE:${w.end}` : `DTEND:${w.end}`,
   ];
   if (info.yearly) lines.push('RRULE:FREQ=YEARLY');
   lines.push(`SUMMARY:${escapeText(summary)}`);
@@ -97,8 +109,9 @@ export function buildIcs({ id, info, summary, description }) {
   return `${lines.map(fold).join('\r\n')}\r\n`;
 }
 
-export function googleUrl({ info, summary, description }) {
-  const params = new URLSearchParams({ action: 'TEMPLATE', text: summary, dates: `${compact(info.start)}/${compact(plusDay(info.end))}` });
+export function googleUrl({ info, summary, description, times }) {
+  const w = when(info, times);
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: summary, dates: `${w.start}/${w.end}` });
   if (description) params.set('details', description);
   if (info.yearly) params.set('recur', 'RRULE:FREQ=YEARLY');
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -109,24 +122,11 @@ function fileName(summary) {
   return `${base || 'event'}.ics`;
 }
 
-// Hands the file to the phone's calendar through the share sheet; on a computer (or when sharing is not possible) it is downloaded.
-export async function sendFile(ics, summary, { download = false } = {}) {
-  const name = fileName(summary);
-  const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  if (!download && touch && navigator.canShare && navigator.share) {
-    const file = new File([ics], name, { type: 'text/calendar' });
-    if (navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-        return;
-      } catch (error) {
-        if (error && error.name === 'AbortError') return; // the person closed the share sheet
-      }
-    }
-  }
+// Downloads the calendar file; on a phone, opening it from the downloads offers the calendars on the device.
+export function sendFile(ics, summary) {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
-  link.download = name;
+  link.download = fileName(summary);
   document.body.append(link);
   link.click();
   link.remove();
