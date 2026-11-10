@@ -50,8 +50,9 @@ export function search(query) {
   const find = (items, extra = () => '') =>
     items
       .map((item) => {
-        const text = `${textOf(item).join(' \n ')} ${extra(item)}`;
-        return { item, text, hit: list.every((word) => fold(text).includes(word)) };
+        const own = textOf(item).join(' \n '); // the item's own text: the snippet comes from this, never from the contact names added for matching
+        const text = `${own} ${extra(item)}`;
+        return { item, text: own, hit: list.every((word) => fold(text).includes(word)) };
       })
       .filter((entry) => entry.hit);
   return {
