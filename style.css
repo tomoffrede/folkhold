@@ -2445,5 +2445,14 @@ body.page-open #auth-root {
 }
 .pin-button[aria-pressed="true"] { color: var(--color-primary); }
 .pin-icon { width: 22px; height: 22px; }
-.person-pin { margin-left: auto; color: var(--color-muted); display: inline-flex; }
-.person-pin .pin-icon { width: 18px; height: 18px; }
+
+.people > li, #contacts-list > li { position: relative; }
+.person-pin {
+  position: absolute; top: 50%; right: var(--space-2); transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--color-muted); opacity: .55; cursor: pointer;
+}
+.person-pin.is-pinned { color: var(--color-primary); opacity: 1; }
+.person-pin .pin-icon { width: 20px; height: 20px; }
+li:has(> .person-pin) > a.person { padding-right: 56px; }

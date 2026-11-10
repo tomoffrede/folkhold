@@ -10,6 +10,7 @@ import { formatDate } from '../dates.js';
 import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
 import { locale } from '../lang.js';
 import { pinIcon } from './icons.js';
+import { showToast } from './toast.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
@@ -55,14 +56,21 @@ function personRow(contact) {
   }
 
   row.append(avatar, text);
-  if (contact.pinned) {
-    const pin = document.createElement('span');
-    pin.className = 'person-pin';
-    pin.title = strings['contact.pinned'];
-    pin.append(pinIcon(true));
-    row.append(pin);
-  }
-  item.append(row);
+  // The pin sits beside the link (a button cannot be inside a link): tap it to pin or unpin without opening the contact.
+  const pin = document.createElement('button');
+  pin.type = 'button';
+  pin.className = contact.pinned ? 'person-pin is-pinned' : 'person-pin';
+  pin.setAttribute('aria-pressed', String(Boolean(contact.pinned)));
+  pin.setAttribute('aria-label', strings[contact.pinned ? 'contact.unpin' : 'contact.pin']);
+  pin.title = strings[contact.pinned ? 'contact.unpin' : 'contact.pin'];
+  pin.append(pinIcon(Boolean(contact.pinned)));
+  pin.addEventListener('click', () => {
+    const { id, ...rest } = contact;
+    if (rest.pinned) delete rest.pinned;
+    else rest.pinned = true;
+    store.update('contact', id, rest).catch((error) => showToast(error.message));
+  });
+  item.append(row, pin);
   return item;
 }
 
