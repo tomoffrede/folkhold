@@ -45,6 +45,8 @@ export function openTour() {
   art.setAttribute('aria-hidden', 'true');
   const title = make('h3', 'tour-title');
   const text = make('p', 'tour-text');
+  const report = make('a', 'link link-small tour-report', strings['report.title']);
+  report.href = 'mailto:folkhold@disroot.org';
   const dots = make('div', 'tour-dots');
   const back = make('button', 'btn btn-secondary btn-small', strings['tour.back']);
   const next = make('button', 'btn btn-primary btn-small');
@@ -52,7 +54,7 @@ export function openTour() {
   for (const b of [back, next, skip]) b.type = 'button';
   const actions = make('div', 'modal-actions tour-actions');
   actions.append(back, next);
-  panel.append(art, title, text, dots, actions, skip);
+  panel.append(art, title, text, report, dots, actions, skip);
   panel.setAttribute('aria-live', 'polite');
   const dialog = openModal(panel);
 
@@ -62,6 +64,8 @@ export function openTour() {
     text.textContent = strings[`tour.${index + 1}.text`];
     dots.replaceChildren(...ART.map((_, i) => make('span', i === index ? 'tour-dot is-on' : 'tour-dot')));
     dots.setAttribute('aria-label', t('tour.progress', { n: index + 1, total: ART.length }));
+    report.hidden = index !== ART.length - 1;
+    report.href = `mailto:folkhold@disroot.org?subject=${encodeURIComponent(strings['report.subject'])}`;
     back.hidden = index === 0;
     next.textContent = strings[index === ART.length - 1 ? 'tour.done' : 'tour.next'];
     skip.hidden = index === ART.length - 1;

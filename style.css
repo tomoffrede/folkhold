@@ -2423,3 +2423,6 @@ body.page-open #auth-root {
 .tour-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); }
 .tour-dot.is-on { background: var(--color-primary); }
 .tour-actions { justify-content: center; }
+
+.report-address { margin: 0 0 var(--space-2); word-break: break-all; }
+.tour-report { display: inline-block; margin-bottom: var(--space-3); }
