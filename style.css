@@ -2412,3 +2412,14 @@ body.page-open #auth-root {
 .time-label { font-size: 0.9em; }
 .time-reading { min-height: 0; }
 .time-reading:empty { display: none; }
+
+/* Tour */
+.tour { text-align: center; }
+.tour-art { color: var(--color-text); margin-bottom: var(--space-2); }
+.tour-art svg { max-width: 100%; height: auto; }
+.tour-title { margin: 0 0 var(--space-2); }
+.tour-text { margin: 0 0 var(--space-3); min-height: 5.5em; }
+.tour-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: var(--space-3); }
+.tour-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); }
+.tour-dot.is-on { background: var(--color-primary); }
+.tour-actions { justify-content: center; }

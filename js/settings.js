@@ -10,6 +10,8 @@ const DEFAULTS = {
   hiddenFields: [], // detail buttons not offered: 'emails', 'phones', 'addresses', 'handles', 'birthday', 'met'
   dateOrder: 'dmy', // 'dmy' = day first (5/3 is 5 March), 'mdy' = month first, US style (5/3 is 3 May)
   showPriority: true, // show the priority choice when writing a note
+  tourVisits: 0, // how many visits showed the "take the tour" card on Home
+  tourDone: false, // the tour was opened or its card dismissed
 };
 
 let queue = Promise.resolve(); // saves run one after the other, so the record is never created twice

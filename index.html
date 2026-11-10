@@ -27,6 +27,14 @@
 <div class="brand"><img class="brand-logo" src="icons/logo.svg" alt="" width="44" height="44"><h1 class="wordmark" data-text="app.name"></h1></div>
 </header>
 
+<div class="a2hs-card no-print" id="tour-card" hidden>
+<p data-text="tour.card"></p>
+<div class="a2hs-actions">
+<button type="button" class="btn btn-primary btn-small" id="tour-show" data-text="tour.show"></button>
+<button type="button" class="link link-small" id="tour-hide" data-text="tour.hide"></button>
+</div>
+</div>
+
 <div class="a2hs-card no-print" id="a2hs-card" hidden>
 <p data-text="a2hs.card"></p>
 <div class="a2hs-actions">
@@ -207,6 +215,10 @@
 <details class="setting-group" id="group-info">
 <summary data-text="settings.infoTitle"></summary>
 <div class="setting-body">
+<div class="setting">
+<button type="button" class="btn btn-secondary btn-small" id="tour-settings" data-text="tour.open"></button>
+</div>
+
 <div class="setting">
 <nav class="legal-links settings-links" data-label="nav.info">
 <a href="#/about" data-text="legal.about"></a>
