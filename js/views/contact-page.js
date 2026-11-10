@@ -24,7 +24,7 @@ import { confirmModal, openModal } from './modal.js';
 import { locale } from '../lang.js';
 import * as relations from '../relations.js';
 import { RELATION_GROUP, relationBlock, relationRow, readRelations, renderRelationsSection, metThroughBlock, metThroughRow, readMetThrough } from './relation-rows.js';
-import { personIcon } from './icons.js';
+import { personIcon, pinIcon } from './icons.js';
 import { handleDropKeys } from '../dropnav.js';
 import { primeKeyboard, focusSoon } from '../keyboard.js';
 import { createPicker } from './contact-picker.js';
@@ -122,7 +122,21 @@ function renderView(page, contact) {
   const edit = make('button', 'btn btn-secondary btn-small', strings['contact.edit']);
   edit.type = 'button';
   edit.dataset.act = 'edit';
-  head.append(titles, edit);
+  const pin = make('button', 'pin-button');
+  pin.type = 'button';
+  pin.append(pinIcon(Boolean(contact.pinned)));
+  pin.setAttribute('aria-pressed', String(Boolean(contact.pinned)));
+  pin.setAttribute('aria-label', strings[contact.pinned ? 'contact.unpin' : 'contact.pin']);
+  pin.title = strings[contact.pinned ? 'contact.unpin' : 'contact.pin'];
+  pin.addEventListener('click', () => {
+    const { id, ...rest } = contact;
+    if (rest.pinned) delete rest.pinned;
+    else rest.pinned = true;
+    store.update('contact', id, rest).catch((error) => showToast(error.message));
+  });
+  const actions = make('div', 'contact-actions');
+  actions.append(pin, edit);
+  head.append(titles, actions);
   page.append(head);
 
   const tagList = (contact.tagIds || []).map((id) => tags.get(id)).filter(Boolean);

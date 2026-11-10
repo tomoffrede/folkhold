@@ -2435,3 +2435,15 @@ body.page-open #auth-root {
 .tag-filter .filter-chips .chip {
   max-width: 100%;
 }
+
+/* Pinned contacts */
+.contact-actions { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+.pin-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--color-muted); cursor: pointer;
+}
+.pin-button[aria-pressed="true"] { color: var(--color-primary); }
+.pin-icon { width: 22px; height: 22px; }
+.person-pin { margin-left: auto; color: var(--color-muted); display: inline-flex; }
+.person-pin .pin-icon { width: 18px; height: 18px; }

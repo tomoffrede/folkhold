@@ -9,6 +9,7 @@ import { search } from '../search.js';
 import { formatDate } from '../dates.js';
 import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
 import { locale } from '../lang.js';
+import { pinIcon } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
 const collator = new Intl.Collator(locale(), { sensitivity: 'base', numeric: true });
@@ -54,11 +55,23 @@ function personRow(contact) {
   }
 
   row.append(avatar, text);
+  if (contact.pinned) {
+    const pin = document.createElement('span');
+    pin.className = 'person-pin';
+    pin.title = strings['contact.pinned'];
+    pin.append(pinIcon(true));
+    row.append(pin);
+  }
   item.append(row);
   return item;
 }
 
 // What the list is sorted by: the full name, or the last name first (chosen with the chips above the list).
+// Pinned contacts come first, then the usual sort order.
+function byPinThenName(a, b) {
+  return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || collator.compare(sortName(a), sortName(b));
+}
+
 function sortName(contact) {
   if (settings.get('contactSort') === 'last') {
     const last = contact.lastName || contact.firstName || contact.nickname || '';
@@ -283,7 +296,7 @@ function renderSearch() {
     heading.textContent = t(key, { n: count });
     box.append(heading, ...nodes);
   };
-  const contacts = found.contacts.sort((a, b) => collator.compare(sortName(a), sortName(b)));
+  const contacts = found.contacts.sort(byPinThenName);
   group('search.contacts', contacts.length, [Object.assign(document.createElement('ul'), { className: 'people' })]);
   box.querySelector('ul.people')?.append(...contacts.map(personRow));
   const noteNodes = found.notes.map(({ item, snippet }) => {
@@ -339,7 +352,7 @@ function renderList() {
       const test = (id) => own.includes(id);
       return matchAll ? [...selected].every(test) : [...selected].some(test);
     })
-    .sort((a, b) => collator.compare(sortName(a), sortName(b)));
+    .sort(byPinThenName);
   $('contacts-list').replaceChildren(...contacts.map(personRow));
   $('contacts-empty').hidden = !(loaded && everyone.length === 0);
   $('contacts-nomatch').textContent = strings['filter.noMatch'];
