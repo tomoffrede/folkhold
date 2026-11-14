@@ -2456,3 +2456,25 @@ body.page-open #auth-root {
 .person-pin.is-pinned { color: var(--color-primary); opacity: 1; }
 .person-pin .pin-icon { width: 20px; height: 20px; }
 li:has(> .person-pin) > a.person { padding-right: 56px; }
+
+/* Home: four equal buttons in two rows */
+.home-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.home-actions .btn { width: 100%; flex-direction: column; gap: 6px; font-size: 18px; height: 104px; }
+.home-actions .btn-primary { font-size: 18px; }
+
+/* Met up pop-up */
+.meetup { display: flex; flex-direction: column; gap: var(--space-3); text-align: left; }
+.meetup .prompt-title { margin: 0; }
+.meetup-days { display: flex; gap: var(--space-2); }
+.meetup-other, .meetup-what {
+  width: 100%; box-sizing: border-box; height: 52px; padding: 0 var(--space-4); font-size: 16px; font-family: inherit;
+  border: 1px solid var(--color-field-border); border-radius: var(--radius-card); background: var(--color-card); color: var(--color-text);
+}
+.meetup-message { margin: 0; min-height: 1.3em; color: #c0392b; font-size: 0.9em; }
+.meetup .modal-actions { justify-content: center; }
+.meetup .link { align-self: center; }
+.last-met-log { margin-left: var(--space-2); }
+.toast { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.toast-action { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; padding: 8px; cursor: pointer; }
+
+.sort-row { margin: calc(-1 * var(--space-2)) 0 var(--space-2); }

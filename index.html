@@ -45,10 +45,13 @@
 
 <div class="home-actions">
 <button type="button" class="btn btn-primary" data-action="add-contact">
-<svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M19 8v6M16 11h6"/></svg>
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M19 8v6M16 11h6"/></svg>
 <span data-text="home.addContact"></span>
 </button>
-<div class="btn-row">
+<button type="button" class="btn btn-secondary" data-action="met-up">
+<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="8" r="3.5"/><path d="M1.5 20v-1a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v1M14 14.2a5 5 0 0 1 2.5-.7h1a5 5 0 0 1 5 5v1.5"/></svg>
+<span data-text="home.metUp"></span>
+</button>
 <button type="button" class="btn btn-secondary" data-action="add-event">
 <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>
 <span data-text="home.addEvent"></span>
@@ -57,7 +60,6 @@
 <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
 <span data-text="home.addNote"></span>
 </button>
-</div>
 </div>
 
 <div class="section-head">
@@ -71,11 +73,9 @@
 <section class="screen" data-screen="contacts" hidden>
 <div class="screen-head contacts-head">
 <h2 class="section-title" data-text="contacts.title"></h2>
-<div class="head-tools">
-<span class="sort-line"><span class="sort-label" data-text="contacts.sortBy"></span> <span class="sort-links" id="contacts-sort"></span></span>
 <button type="button" class="btn btn-secondary btn-small" data-action="add-contact" data-text="contacts.add"></button>
 </div>
-</div>
+<p class="sort-row"><span class="sort-line"><span class="sort-label" data-text="contacts.sortBy"></span> <span class="sort-links" id="contacts-sort"></span></span></p>
 <p class="empty" id="contacts-status" hidden></p>
 <div class="search-line">
 <div class="search-wrap">

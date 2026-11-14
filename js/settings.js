@@ -5,7 +5,8 @@ import * as store from './store.js';
 import { setOrderProvider } from './datewords.js';
 
 const DEFAULTS = {
-  contactSort: 'first', // 'first' = by first name, 'last' = by last name
+  contactSort: 'first', // 'first' = by first name, 'last' = by last name, 'met' = by when you last met
+  contactMetOrder: 'recent', // with 'met': 'recent' = most recently met first, 'oldest' = longest ago first
   showLastMet: true, // show "Last met: ..." on a contact's page
   hiddenFields: [], // detail buttons not offered: 'emails', 'phones', 'addresses', 'handles', 'birthday', 'met'
   dateOrder: 'dmy', // 'dmy' = day first (5/3 is 5 March), 'mdy' = month first, US style (5/3 is 3 May)

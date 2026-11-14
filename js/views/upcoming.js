@@ -1,6 +1,7 @@
 // The Upcoming screen (#/upcoming) and the short "Upcoming" list on the Home screen.
 // Shows events that are coming (including yearly ones such as birthdays) and contacts' birthdays, soonest first.
 
+import { eventTitle } from '../eventtitle.js';
 import { strings, t } from '../strings.js';
 import { locale } from '../lang.js';
 import { monthName } from '../datewords.js';
@@ -42,7 +43,7 @@ export function collect(limitDays, today = startOfToday()) {
       ts: next,
       exact: isSingleDay(event),
       label: formatDate(event.date),
-      title: event.title || strings['event.untitled'],
+      title: eventTitle(event),
       names: contacts.map(displayName).join(', '),
       href: `#/event/${event.id}/${contacts[0].id}`,
       together: event.kind === 'together',

@@ -30,6 +30,7 @@ import { primeKeyboard, focusSoon } from '../keyboard.js';
 import { createPicker } from './contact-picker.js';
 import { splitMet } from '../metsplit.js';
 import { openCalendarChooser } from './calendar-add.js';
+import { openMeetup } from './meetup.js';
 
 const $ = (id) => document.getElementById(id);
 const SAVE_DELAY = 700; // milliseconds of quiet after typing before saving
@@ -152,9 +153,14 @@ function renderView(page, contact) {
     page.append(row);
   }
 
-  const lastMet = settings.get('showLastMet') ? lastTogether(events.listFor(contact.id)) : null;
-  if (lastMet) {
-    page.append(make('p', 'last-met', t('contact.lastMet', { when: formatDate(lastMet.event.date), ago: relative(lastMet.time) })));
+  if (settings.get('showLastMet')) {
+    const lastMet = lastTogether(events.listFor(contact.id));
+    const line = make('p', 'last-met', lastMet ? t('contact.lastMet', { when: formatDate(lastMet.event.date), ago: relative(lastMet.time) }) : strings['contact.lastMetNone']);
+    const log = make('button', 'link link-small last-met-log', strings['contact.logMeetup']);
+    log.type = 'button';
+    log.addEventListener('click', () => openMeetup({ contactIds: [contact.id] }));
+    line.append(' ', log);
+    page.append(line);
   }
 
   const details = collapsible({ key: 'details', title: strings['contact.details'], defaultOpen: false, className: 'details' });

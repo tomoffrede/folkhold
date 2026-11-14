@@ -7,9 +7,12 @@ import * as settings from '../settings.js';
 import * as tags from '../tags.js';
 import { search } from '../search.js';
 import { formatDate } from '../dates.js';
-import { HAS_FIELDS, LAST_MET_MONTHS, matchesAll } from '../filters.js';
+import { HAS_FIELDS, LAST_MET_CHOICES, matchesAll } from '../filters.js';
 import { locale } from '../lang.js';
 import { pinIcon } from './icons.js';
+import { eventTitle } from '../eventtitle.js';
+import * as events from '../events.js';
+import { lastTogether, relative } from '../dates.js';
 import { showToast } from './toast.js';
 
 const $ = (id) => document.getElementById(id);
@@ -55,6 +58,14 @@ function personRow(contact) {
     text.append(document.createElement('br'), nick);
   }
 
+  // While sorted by last met, each row says when (so the order is understandable).
+  if (settings.get('contactSort') === 'met' && !query) {
+    const time = lastMetTime(contact);
+    const when = document.createElement('span');
+    when.className = 'person-nick';
+    when.textContent = time === null ? strings['contacts.metNone'] : relative(time);
+    text.append(document.createElement('br'), when);
+  }
   row.append(avatar, text);
   // The pin sits beside the link (a button cannot be inside a link): tap it to pin or unpin without opening the contact.
   const pin = document.createElement('button');
@@ -77,7 +88,25 @@ function personRow(contact) {
 // What the list is sorted by: the full name, or the last name first (chosen with the chips above the list).
 // Pinned contacts come first, then the usual sort order.
 function byPinThenName(a, b) {
-  return Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || collator.compare(sortName(a), sortName(b));
+  const pins = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+  if (pins) return pins;
+  if (settings.get('contactSort') === 'met') {
+    const x = lastMetTime(a);
+    const y = lastMetTime(b);
+    if (x !== y && (x === null || y === null)) return x === null ? 1 : -1; // contacts with no meet-up logged always go last
+    if (x !== y) return settings.get('contactMetOrder') === 'oldest' ? x - y : y - x;
+  }
+  return collator.compare(sortName(a), sortName(b));
+}
+
+// When you last met someone (a time, or null when no meet-up is logged), worked out once per drawing of the list.
+let metTimes = new Map();
+function lastMetTime(contact) {
+  if (!metTimes.has(contact.id)) {
+    const found = lastTogether(events.listFor(contact.id));
+    metTimes.set(contact.id, found ? found.time : null);
+  }
+  return metTimes.get(contact.id);
 }
 
 function sortName(contact) {
@@ -132,7 +161,7 @@ function conditionRow(condition, index) {
   const whats = [...HAS_FIELDS.map((field) => [field, strings[`filter.field.${field}`]]), ['lastMet', strings['filter.lastMet']], ['birthdayMonth', strings['filter.birthdayIn']]];
   row.append(
     select(whats, conditionKey(condition), (value) => {
-      if (value === 'lastMet') conditions[index] = { type: 'lastMet', months: 6 };
+      if (value === 'lastMet') conditions[index] = { type: 'lastMet', since: '6m' };
       else if (value === 'birthdayMonth') conditions[index] = { type: 'birthdayMonth', month: new Date().getMonth() + 1 };
       else conditions[index] = { type: 'has', field: value, not: condition.type === 'has' ? condition.not : false };
       refresh();
@@ -140,8 +169,8 @@ function conditionRow(condition, index) {
   );
   if (condition.type === 'lastMet') {
     row.append(
-      select(LAST_MET_MONTHS.map((n) => [n, t('filter.lastMetOption', { n })]), condition.months, (value) => {
-        condition.months = Number(value);
+      select(LAST_MET_CHOICES.map(([key]) => [key, strings[`filter.lm.${key}`]]), condition.since, (value) => {
+        condition.since = value;
         refresh();
       }),
     );
@@ -314,7 +343,7 @@ function renderSearch() {
   group('search.notes', noteNodes.length, noteNodes);
   const eventNodes = found.events.map(({ item, snippet }) => {
     const first = (item.contactIds || [])[0];
-    return resultLink(`#/event/${item.id}/${first}`, `${item.title || strings['event.untitled']} · ${formatDate(item.date)}`, item.details ? snippet : '', namesOf(item).join(', '));
+    return resultLink(`#/event/${item.id}/${first}`, `${eventTitle(item)} · ${formatDate(item.date)}`, item.details ? snippet : '', namesOf(item).join(', '));
   });
   group('search.events', eventNodes.length, eventNodes);
   if (!contacts.length && !noteNodes.length && !eventNodes.length) {
@@ -329,21 +358,33 @@ function renderSortChips() {
   const chips = $('contacts-sort');
   const current = settings.get('contactSort');
   if (!chips.children.length) {
-    ['first', 'last'].forEach((value) => {
-      const chip = el('button', 'link sort-link', strings[value === 'first' ? 'settings.sortFirst' : 'settings.sortLast']);
+    ['first', 'last', 'met'].forEach((value) => {
+      const chip = el('button', 'link sort-link');
       chip.type = 'button';
       chip.dataset.sort = value;
       chip.addEventListener('click', () => {
-        settings.set('contactSort', value).catch(() => {});
+        if (value === 'met' && settings.get('contactSort') === 'met') {
+          // tapping "Last met" again flips between most recent first and longest ago first
+          settings.set('contactMetOrder', settings.get('contactMetOrder') === 'oldest' ? 'recent' : 'oldest').catch(() => {});
+        } else {
+          settings.set('contactSort', value).catch(() => {});
+        }
         renderList(); // the list changes at once; the choice is saved in the background
       });
       chips.append(chip);
     });
   }
-  chips.querySelectorAll('.sort-link').forEach((chip) => chip.setAttribute('aria-pressed', String(chip.dataset.sort === current)));
+  chips.querySelectorAll('.sort-link').forEach((chip) => {
+    const value = chip.dataset.sort;
+    let label = strings[{ first: 'settings.sortFirst', last: 'settings.sortLast', met: 'settings.sortMet' }[value]];
+    if (value === 'met' && current === 'met') label += settings.get('contactMetOrder') === 'oldest' ? ' ↑' : ' ↓';
+    chip.textContent = label;
+    chip.setAttribute('aria-pressed', String(value === current));
+  });
 }
 
 function renderList() {
+  metTimes = new Map();
   renderSortChips();
   if (query) {
     renderSearch();

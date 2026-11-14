@@ -1,5 +1,6 @@
 // Events on the contact page: a short list (the "Events" section) and the row shown for each event.
 
+import { eventTitle } from '../eventtitle.js';
 import { strings, t } from '../strings.js';
 import * as store from '../store.js';
 import * as events from '../events.js';
@@ -45,7 +46,7 @@ export function eventRow(event, contact, { showYear = true } = {}) {
   dot.append(personIcon(together ? 2 : 1));
   dot.setAttribute('role', 'img');
   dot.setAttribute('aria-label', t(`event.kind.${together ? 'together' : 'life'}`, { name: contact.firstName || contact.nickname || displayName(contact) }));
-  title.append(dot, document.createTextNode(event.virtual ? strings['birthday.event'] : event.title || strings['event.untitled']));
+  title.append(dot, document.createTextNode(event.virtual ? strings['birthday.event'] : eventTitle(event)));
   text.append(title);
 
   const others = (event.contactIds || [])

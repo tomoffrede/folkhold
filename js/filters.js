@@ -1,7 +1,7 @@
 // The advanced contact filter: a list of conditions, all of which must be true for a contact to be shown.
 // A condition is one of:
 //   { type: 'has', field, not }      field: birthday, emails, phones, addresses, handles, met, notes, events, tags, important
-//   { type: 'lastMet', months }      last met more than this many months ago, or never
+//   { type: 'lastMet', since }       last met more than this long ago (a key of LAST_MET_CHOICES), or no meet-up logged
 //   { type: 'birthdayMonth', month } birthday in this month (1 to 12)
 
 import * as notes from './notes.js';
@@ -10,7 +10,8 @@ import * as relations from './relations.js';
 import { lastTogether, startOfToday } from './dates.js';
 
 export const HAS_FIELDS = ['birthday', 'emails', 'phones', 'addresses', 'handles', 'met', 'notes', 'events', 'tags', 'important', 'relations'];
-export const LAST_MET_MONTHS = [3, 6, 12];
+// The choices for "last met more than …": weeks and months, as [key, weeks or months].
+export const LAST_MET_CHOICES = [['2w', 'w', 2], ['1m', 'm', 1], ['2m', 'm', 2], ['3m', 'm', 3], ['6m', 'm', 6], ['1y', 'm', 12]];
 
 function has(contact, field) {
   switch (field) {
@@ -33,16 +34,18 @@ function has(contact, field) {
   }
 }
 
-function lastMetBefore(contact, months) {
+function lastMetBefore(contact, key) {
   const found = lastTogether(events.listFor(contact.id));
-  if (!found) return true; // never met counts as "more than N months ago"
+  if (!found) return true; // no meet-up logged counts as "more than that ago"
+  const [, unit, n] = LAST_MET_CHOICES.find((choice) => choice[0] === key) || LAST_MET_CHOICES[4];
   const limit = new Date(startOfToday());
-  limit.setMonth(limit.getMonth() - months);
+  if (unit === 'w') limit.setDate(limit.getDate() - 7 * n);
+  else limit.setMonth(limit.getMonth() - n);
   return found.time < limit.getTime();
 }
 
 export function matches(contact, condition) {
-  if (condition.type === 'lastMet') return lastMetBefore(contact, condition.months);
+  if (condition.type === 'lastMet') return lastMetBefore(contact, condition.since);
   if (condition.type === 'birthdayMonth') return Boolean(contact.birthday) && contact.birthday.month === condition.month;
   return has(contact, condition.field) !== Boolean(condition.not);
 }
