@@ -482,16 +482,26 @@ function spanNote(from, to) {
 
 function rangeLabel(left, right, long) {
   const plain = (d) => !d.part && d.kind;
+  // "Mid" from "Mid {x}" (and "Mi" from "Mi-{x}", "Principios" from "Principios de {x}"): the part word alone, for "Mid–Late Nov 2026".
+  const partWord = (d) => partLabel(d.part, '').trim().replace(/[-\s]+$/, '').replace(/\s+de$/i, '');
   if (left.kind === 'month' && right.kind === 'month' && plain(left) && plain(right) && left.y === right.y) {
     return `${monthName(left.m, long)}–${monthName(right.m, long)}${yearJoin(long)}${left.y}`;
+  }
+  // Two parts of the same month or year share the month and year: "Mid–Late Nov 2026", "Early–Late 2026".
+  if (left.part && right.part && left.kind === right.kind && left.y === right.y && (left.kind === 'year' || (left.kind === 'month' && left.m === right.m))) {
+    return `${partWord(left)}–${right.label(long)}`;
+  }
+  // Two seasons of one year: "Summer–Autumn 2026".
+  if (left.season && right.season && left.y === right.y) {
+    return `${strings[`dates.${left.season.toLowerCase()}`]}–${strings[`dates.${right.season.toLowerCase()}`]}${yearJoin(long)}${left.y}`;
   }
   if (left.kind === 'exact' && right.kind === 'exact' && left.y === right.y && left.m === right.m) {
     return `${dayRange(left.d, right.d, left.m, long)}${yearJoin(long)}${left.y}`;
   }
-  // The same year on both sides is written once, at the end: "28 Oct–8 Nov 2026".
-  const dated = (d) => (d.kind === 'exact' || (d.kind === 'month' && !d.part)) && d.y;
+  // The same year on both sides is written once, at the end: "28 Oct–8 Nov 2026", "Mid Nov–Early Dec 2026".
+  const dated = (d) => (d.kind === 'exact' || d.kind === 'month') && d.y;
   if (dated(left) && dated(right) && left.y === right.y) {
-    const bit = (d) => (d.kind === 'exact' ? dayMonth(d.d, d.m, long) : monthName(d.m, long));
+    const bit = (d) => (d.kind === 'exact' ? dayMonth(d.d, d.m, long) : partLabel(d.part, monthName(d.m, long)));
     return `${bit(left)}–${bit(right)}${yearJoin(long)}${right.y}`;
   }
   return `${left.label(long)}–${right.label(long)}`;
@@ -690,6 +700,7 @@ function sameDate(a, b) {
 // The text of a date in two short lines for a narrow column: ["14 Mar", "2024"].
 export function dateLines(date) {
   const text = formatDate(date);
+  if ((text.match(/\b\d{4}\b/g) || []).length > 1) return [text, '']; // a range across years stays whole
   const m = text.match(/^(.*[\p{L}.])\s+(\d{4})$/u);
   return m ? [m[1], m[2]] : [text, ''];
 }
