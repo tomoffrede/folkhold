@@ -454,6 +454,7 @@ export default {
   'cal.google': "Google Agenda",
   'cal.file': "Baixar arquivo de calendário",
   'cal.cancel': "Cancelar",
+  'cal.with': "Com: {names}",
   'cal.nextDay': "(dia seguinte)",
   'cal.timeReadingDefault': "{range} (1 hora por padrão)",
   'cal.timeErrEnd': "Não consigo ler o horário de fim.",

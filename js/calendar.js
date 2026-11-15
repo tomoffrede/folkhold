@@ -39,7 +39,13 @@ export function calendarInfo(date, repeat = false) {
 
 // The calendar event's title and description from the event's title and details.
 // No title: the first words of the details become the title; the full details are kept as the description unless they fit in the title.
-export function calendarTexts({ title, details, fallback }) {
+// withLine (optional) is added to the description first, e.g. "With: Anna, Ben".
+export function calendarTexts({ title, details, fallback, withLine = '' }) {
+  const texts = plainTexts({ title, details, fallback });
+  return { summary: texts.summary, description: [withLine, texts.description].filter(Boolean).join('\n\n') };
+}
+
+function plainTexts({ title, details, fallback }) {
   const name = String(title || '').trim();
   const text = String(details || '').trim();
   if (name) return { summary: name, description: text };

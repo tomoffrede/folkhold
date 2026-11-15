@@ -454,6 +454,7 @@ export default {
   'cal.google': "Google Kalender",
   'cal.file': "Kalenderdatei herunterladen",
   'cal.cancel': "Abbrechen",
+  'cal.with': "Mit: {names}",
   'cal.nextDay': "(Folgetag)",
   'cal.timeReadingDefault': "{range} (standardmäßig 1 Stunde)",
   'cal.timeErrEnd': "Das Ende kann ich nicht lesen.",

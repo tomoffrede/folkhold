@@ -454,6 +454,7 @@ export default {
   'cal.google': "Google Calendar",
   'cal.file': "Descargar archivo de calendario",
   'cal.cancel': "Cancelar",
+  'cal.with': "Con: {names}",
   'cal.nextDay': "(día siguiente)",
   'cal.timeReadingDefault': "{range} (1 hora por defecto)",
   'cal.timeErrEnd': "No puedo leer la hora de fin.",

@@ -15,10 +15,11 @@ function make(tag, className, text) {
 }
 
 // values: { title, details, date, repeat }. Returns when the pop-up is closed.
-export function openCalendarChooser({ id, values, fallback }) {
+export function openCalendarChooser({ id, values, fallback, names = [] }) {
+  const withLine = names.length ? t('cal.with', { names: names.join(', ') }) : ''; // "With: Anna, Ben"
   const info = calendarInfo(values.date, values.repeat);
   if (!info) return Promise.resolve();
-  const texts = calendarTexts({ title: values.title, details: values.details, fallback });
+  const texts = calendarTexts({ title: values.title, details: values.details, fallback, withLine });
   return new Promise((resolve) => {
     // iPhone Safari cancels a file download that has only just started if the page changes at the same moment
     // (which happens when this pop-up was opened by saving a new event), so the caller waits a moment after a download.
@@ -115,12 +116,12 @@ export function openCalendarChooser({ id, values, fallback }) {
 }
 
 // The button on an existing event. getValues() gives the current { title, details, date, repeat }.
-export function calendarButton({ getId, getValues, getFallback }) {
+export function calendarButton({ getId, getValues, getFallback, getNames = () => [] }) {
   const wrap = make('div', 'calendar-add');
   const button = make('button', 'btn btn-secondary btn-small', strings['cal.add']);
   button.type = 'button';
   const hint = make('p', 'hint', strings['cal.needDay']);
-  button.addEventListener('click', () => openCalendarChooser({ id: getId(), values: getValues(), fallback: getFallback() }));
+  button.addEventListener('click', () => openCalendarChooser({ id: getId(), values: getValues(), fallback: getFallback(), names: getNames() }));
   wrap.append(button, hint);
   const refresh = () => {
     const ok = Boolean(calendarInfo(getValues().date, getValues().repeat));

@@ -450,6 +450,7 @@ export const strings = {
   'cal.google': "Google Calendar",
   'cal.file': "Download calendar file",
   'cal.cancel': "Cancel",
+  'cal.with': "With: {names}",
   'cal.nextDay': "(next day)",
   'cal.timeReadingDefault': "{range} (1 hour by default)",
   'cal.timeErrEnd': "I can't read the end time.",

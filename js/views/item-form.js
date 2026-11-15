@@ -173,6 +173,11 @@ function linkedLine(template, contacts) {
 }
 
 // The calendar title of an event that has no title and no details: "Event with Anna, Berta".
+// The full names of the contacts, for the calendar event's "With: …" line.
+function calendarNames(contactIds) {
+  return [...new Set(contactIds)].map((id) => store.get('contact', id)).filter(Boolean).map(displayName);
+}
+
 function calendarFallback(contactIds) {
   const names = [...new Set(contactIds)].map((id) => store.get('contact', id)).filter(Boolean).map(shortName);
   return names.length ? t('cal.fallback', { names: names.join(', ') }) : strings['cal.fallbackNone'];
@@ -227,7 +232,7 @@ function buildNew(page, route) {
       if (contactIds.length === 1 && (await moveBirthday(route, values, store.get('contact', contactIds[0]), null))) return;
       const newId = await kind.api.create({ ...kind.pick(values), contactIds });
       clearDraft(name);
-      if (tick && tick.checked()) await openCalendarChooser({ id: newId, values: kind.pick(values), fallback: calendarFallback(contactIds) });
+      if (tick && tick.checked()) await openCalendarChooser({ id: newId, values: kind.pick(values), fallback: calendarFallback(contactIds), names: calendarNames(contactIds) });
       const target = `#/contact/${preselected[0] || contactIds[0]}`;
       leave(origin === `${target}/edit` ? origin : target); // from a contact's edit page: back to it
     }),
@@ -285,7 +290,7 @@ function buildEdit(page, route, note, contact) {
   formWrap.append(picker.element);
   const promptWrap = make('div');
   promptWrap.hidden = true;
-  if (route.kind === 'event') calendar = calendarButton({ getId: () => note.id, getValues: () => fields.get(), getFallback: () => calendarFallback([route.contactId, ...(note.contactIds || [])]) });
+  if (route.kind === 'event') calendar = calendarButton({ getId: () => note.id, getValues: () => fields.get(), getFallback: () => calendarFallback([route.contactId, ...(note.contactIds || [])]), getNames: () => calendarNames([route.contactId, ...(note.contactIds || [])]) });
   formWrap.append(fields.element, ...(calendar ? [calendar.element] : []), error, save, buildDelete({ route, note, contact, others, error, formWrap, promptWrap }));
   page.append(formWrap, promptWrap);
 
