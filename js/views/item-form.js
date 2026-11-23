@@ -438,6 +438,7 @@ function render() {
 
   if (route.mode === 'new') {
     buildNew(page, route);
+    pinTopBar(page);
     return;
   }
   const note = KINDS[route.kind].api.get(route.itemId);
@@ -447,6 +448,23 @@ function render() {
     return;
   }
   buildEdit(page, route, note, contact);
+  pinTopBar(page);
+}
+
+// The title and the Save button (with its error message) move into a bar that stays on screen while the form scrolls.
+function pinTopBar(page) {
+  const title = page.querySelector('.section-title');
+  const save = page.querySelector('.btn-form');
+  if (!title || !save) return;
+  const error = save.previousElementSibling; // (read before the button moves)
+  const bar = make('div', 'form-bar');
+  const row = make('div', 'form-bar-row');
+  row.append(title, save);
+  bar.append(row);
+  if (error && error.classList.contains('form-error')) bar.append(error);
+  const back = page.querySelector('.back');
+  if (back) back.after(bar);
+  else page.prepend(bar);
 }
 
 export function initNoteForm() {
