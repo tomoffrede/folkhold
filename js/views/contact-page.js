@@ -468,13 +468,6 @@ function showMetReading(block) {
   line.classList.toggle('is-unsure', Boolean(needYear && !date));
 }
 
-function doneButton(className) {
-  const done = make('button', className, strings['contact.done']);
-  done.type = 'button';
-  done.dataset.act = 'done';
-  return done;
-}
-
 function discardButton() {
   const button = make('button', 'btn btn-secondary btn-small', strings['contact.discard']);
   button.type = 'button';
@@ -488,10 +481,21 @@ function renderEditor(page, contact) {
   const status = make('p', 'save-status');
   status.id = 'contact-status';
   status.setAttribute('aria-live', 'polite');
-  const titles = make('div', 'contact-titles');
-  titles.append(title, status);
-  const head = make('div', 'contact-head');
-  head.append(titles, discardButton());
+  // The top bar stays on screen while the page scrolls: the name, "Discard changes" and "Done" (or "Save" for a new contact).
+  const head = make('div', 'contact-head contact-head-fixed');
+  const bar = make('div', 'edit-bar');
+  const main = make('button', 'btn btn-primary btn-small', strings[isNew ? 'addContact.save' : 'contact.done']);
+  main.type = 'button';
+  main.dataset.act = isNew ? 'save-new' : 'done';
+  bar.append(discardButton(), main);
+  head.append(title, bar, status);
+  if (isNew) {
+    const problem = make('p', 'form-error');
+    problem.id = 'contact-new-error';
+    problem.setAttribute('role', 'alert');
+    problem.hidden = true;
+    head.append(problem);
+  }
 
   const names = make('div', 'form');
   const nameRow = make('div', 'field-row');
@@ -558,19 +562,7 @@ function renderEditor(page, contact) {
   }
   page.append(chips, relationRowChips);
   if (noteRow) page.append(noteRow);
-  if (isNew) {
-    const problem = make('p', 'form-error');
-    problem.id = 'contact-new-error';
-    problem.setAttribute('role', 'alert');
-    problem.hidden = true;
-    page.append(problem);
-    const create = make('button', 'btn btn-primary btn-form done-bottom', strings['addContact.save']);
-    create.type = 'button';
-    create.dataset.act = 'save-new';
-    page.append(create);
-  } else {
-    page.append(doneButton('btn btn-primary btn-form done-bottom'), danger);
-  }
+  if (!isNew) page.append(danger);
 }
 
 // ---------- showing the right page ----------
